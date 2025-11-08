@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Помодоро Таймер — Фокус, Перерывы, Звук, Задачи</title>
+  <script type="module" src="/src/cap-notify.ts"></script>
+  <style>
+    :root {
+      --bg: #0f1222;
+      --panel: #141833;
+      --text: #e9ecff;
+      --muted: #a9b1d6;
+      --accent: #7c9fff;
+      --accent-2: #00d4ff;
+      --danger: #ff5a7a;
+      --ok: #2ecc71;
+      --warn: #ffb74d;
+      --ring: #8ab4ff;
+      --ring-bg: rgba(138,180,255,0.15);
+      --border: #2a2f55;
+      --chip: #1a1f40;
+      --shadow: 0 10px 40px rgba(0,0,0,0.35);
+    }
+    .light {
+      --bg: #eef3ff;
+      --panel: #ffffff;
+      --text: #1a1f36;
+      --muted: #5a668a;
+      --accent: #3b6cff;
+      --accent-2: #00a3ff;
+      --danger: #e53935;
+      --ok: #2e7d32;
+      --warn: #f59f00;
+      --ring: #3b6cff;
+      --ring-bg: rgba(59,108,255,0.12);
+      --border: #e6e9f5;
+      --chip: #f6f8ff;
+      --shadow: 0 10px 30px rgba(17,38,146,0.08);
+    }
+    html,body {
+      height: 100%;
+    }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(1200px 600px at 10% 0%, rgba(0,212,255,0.12), transparent 60%),
+        radial-gradient(1000px 500px at 90% 10%, rgba(124,159,255,0.15), transparent 70%),
+        linear-gradient(180deg, var(--bg), #0b0e1b 60%, var(--bg));
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 24px auto;
+      padding: 0 16px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+    }
+    @media (max-width: 980px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      padding: 12px 16px;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; letter-spacing: 0.3px;
+    }
+    .brand .logo {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 8px 24px rgba(0,212,255,0.3), inset 0 0 0 2px rgba(255,255,255,0.2);
+    }
+    .brand .title { font-size: 18px; }
+
+    .theme-toggle {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 10px;
+      cursor: pointer;
+      user-select: none;
+      box-shadow: var(--shadow);
+    }
+    .theme-toggle input { display: none; }
+    .theme-toggle .dot {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: linear-gradient(135deg, #ffd54f, #ff8f00);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.35);
+    }
+    .theme-label { color: var(--muted); font-size: 13px; }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    /* Top progress bar */
+    .top-progress {
+      position: fixed;
+      top: 0; left: 0; height: 4px; width: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07));
+      z-index: 50;
+    }
+    .top-progress .bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width 0.2s ease-out;
+      box-shadow: 0 0 10px var(--accent-2);
+    }
+
+    /* Main timer panel */
+    .timer-panel {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      min-height: 540px;
+    }
+    .mode-chips {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .chip {
+      background: var(--chip);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform .05s;
+    }
+    .chip:hover { transform: translateY(-1px); }
+    .chip.active {
+      background: linear-gradient(135deg, rgba(124,159,255,0.22), rgba(0,212,255,0.18));
+      border-color: transparent;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+    }
+    .grid-center {
+      display: grid; place-items: center; padding: 8px 0;
+    }
+    .timer-wrap {
+      position: relative;
+      width: 360px; height: 360px;
+      display: grid; place-items: center;
+    }
+    @media (max-width: 420px) {
+      .timer-wrap { width: 300px; height: 300px; }
+    }
+    .timer-value {
+      font-size: 68px; font-weight: 800; letter-spacing: 1px;
+      text-shadow: 0 6px 30px rgba(0,0,0,0.35);
+    }
+    .subnote {
+      margin-top: 6px; color: var(--muted); font-size: 13px;
+    }
+    .controls {
+      display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 10px;
+    }
+    .btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #001221;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 12px; font-weight: 700;
+      cursor: pointer; box-shadow: var(--shadow);
+    }
+    .btn.secondary {
+      background: var(--chip);
+      color: var(--text);
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+    .btn.danger {
+      background: linear-gradient(135deg, #ff6b6b, #ff2e63);
+      color: #fff;
+    }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ring */
+    svg#ring { position: absolute; inset: 0; }
+    .ring-bg { stroke: var(--ring-bg); }
+    .ring-fg { stroke: var(--ring); filter: drop-shadow(0 0 10px rgba(138,180,255,0.5)); }
+
+    /* right side */
+    .side {
+      display: grid; gap: 16px;
+    }
+    .section-title {
+      font-size: 14px; color: var(--muted); margin: 0 0 10px; letter-spacing: .3px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .form-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 0; }
+    .input, select {
+      background: var(--chip); color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 12px;
+      outline: none; width: 100%;
+    }
+    .range { width: 100%; }
+    .switch {
+      display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;
+    }
+    .switch input { display: none; }
+    .switch .track {
+      width: 44px; height: 24px; background: var(--chip); border: 1px solid var(--border); border-radius: 999px; position: relative;
+    }
+    .switch .thumb {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      left: 3px; width: 18px; height: 18px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      transition: left .15s;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    .switch input:checked + .track .thumb { left: 23px; }
+
+    /* tasks */
+    .tasks { display: grid; gap: 10px; }
+    .task {
+      display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center;
+      padding: 10px; border-radius: 12px; background: var(--chip); border: 1px solid var(--border);
+    }
+    .task input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+    .task .title { font-weight: 600; }
+    .task .meta { color: var(--muted); font-size: 12px; }
+    .task.active { box-shadow: inset 0 0 0 2px var(--accent); }
+    .task .actions { display: flex; gap: 6px; }
+    .task .icon-btn {
+      background: transparent; color: var(--muted); border: 1px solid var(--border);
+      padding: 6px 8px; border-radius: 8px; cursor: pointer;
+    }
+
+    /* stats */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    @media (max-width: 500px) { .stats { grid-template-columns: 1fr; } }
+    .stat {
+      background: var(--chip); border: 1px solid var(--border); border-radius: 12px;
+      padding: 12px; display: grid; gap: 6px;
+    }
+    .stat .label { color: var(--muted); font-size: 12px; }
+    .stat .value { font-size: 18px; font-weight: 800; }
+
+    footer {
+      opacity: 0.8; text-align: center; font-size: 12px; color: var(--muted); padding: 8px 16px 22px;
+    }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: var(--chip); border: 1px solid var(--border); padding: 2px 6px; border-radius: 6px; }
+    /* 1) Лейблы сверху с небольшим отступом, только в .row чтобы не задеть переключатели .switch */
+.row > div > label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* 2) Не давать колонкам "распирать" сетку */
+.row > div {
+  min-width: 0;
+}
+
+/* 3) Гарантировать корректный расчет ширины инпутов */
+.input, select {
+  box-sizing: border-box;
+}
+
+/* 4) На узких экранах складываем .row в одну колонку */
+@media (max-width: 640px) {
+  .side .row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* 5) Форм-строки (слайдер, кнопки) — перенос по строкам на мобильных */
+@media (max-width: 640px) {
+  .form-row {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+  .form-row > * {
+    flex: 1 1 100%;
+  }
+  /* Слайдер под подписью "Громкость" — маленький отступ сверху */
+  .form-row .range {
+    margin-top: 8px;
+  }
+  /* Пара кнопок "Тест звука" / "Проверить уведомление" — друг под другом с промежутком */
+  .form-row .btn {
+    width: 100%;
+  }
+}
+  </style>
+</head>
+<body>
+  <div class="top-progress"><div id="topBar" class="bar"></div></div>
+  <header>
+  <div class="brand">
+  <div class="logo" aria-hidden="true"></div>
+  <div class="title">Помодоро Таймер</div>
+  </div>
+  <label class="theme-toggle" title="Тема: Светлая/Тёмная">
+  <input id="themeToggle" type="checkbox" />
+  <span class="dot"></span>
+  <span class="theme-label" id="themeLabel">Тёмная</span>
+  </label>
+  </header>
+  <div class="container">
+  <!-- Main Timer -->
+  <section class="panel timer-panel" aria-label="Таймер">
+  <div class="mode-chips" role="tablist" aria-label="Режимы таймера">
+  <button id="chipFocus" class="chip active" role="tab" aria-selected="true">Фокус</button>
+  <button id="chipShort" class="chip" role="tab">Короткий перерыв</button>
+  <button id="chipLong" class="chip" role="tab">Длинный перерыв</button>
+  </div>
+  <div class="grid-center">
+  <div class="timer-wrap">
+  <svg id="ring" viewBox="0 0 360 360" width="100%" height="100%" aria-hidden="true">
+  <defs>
+  <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+  <stop offset="0%" stop-color="var(--accent)" />
+  <stop offset="100%" stop-color="var(--accent-2)" />
+  </linearGradient>
+  </defs>
+  <circle class="ring-bg" cx="180" cy="180" r="150" fill="none" stroke-width="22" />
+  <circle id="ringFg" class="ring-fg" cx="180" cy="180" r="150" fill="none" stroke="url(#ringGrad)" stroke-width="22"
+  stroke-linecap="round" stroke-dasharray="942" stroke-dashoffset="0" transform="rotate(-90 180 180)" />
+  </svg>
+  <div id="time" class="timer-value" aria-live="polite">25:00</div>
+  </div>
+  
+  <!-- Вынесенная строка текущей задачи под кругом -->
+  <div id="subnote" class="subnote">Готовы к работе. Текущая задача: —</div>
+  
+  <div class="controls">
+  <button id="btnStartPause" class="btn" aria-label="Старт/Пауза (Space)">Старт</button>
+  <button id="btnReset" class="btn secondary" aria-label="Сброс (R)">Сброс</button>
+  <button id="btnSkip" class="btn secondary" aria-label="Следующий режим (N)">Пропуск</button>
+  </div>
+  <!-- <div class="subnote">
+  Горячие клавиши: <span class="kbd">Space</span> Старт/Пауза · <span class="kbd">R</span> Сброс · <span class="kbd">N</span> Следующий ·
+  <span class="kbd">1</span>/<span class="kbd">2</span>/<span class="kbd">3</span> Режим
+  </div> -->
+  </div>
+  <div class="stats">
+  <div class="stat">
+  <div class="label">Сегодня помидорок</div>
+  <div id="statToday" class="value">0</div>
+  </div>
+  <div class="stat">
+  <div class="label">Фокус (сегодня)</div>
+  <div id="statFocusTime" class="value">00:00</div>
+  </div>
+  <div class="stat">
+  <div class="label">Цикл до длинного перерыва</div>
+  <div id="statCycle" class="value">1 / 4</div>
+  </div>
+  </div>
+  </section>
+  <!-- Side settings and tasks -->
+  <aside class="side">
+  <section class="panel" aria-label="Настройки">
+  <h3 class="section-title">Настройки</h3>
+  <div class="row">
+  <div>
+  <label>Фокус (мин)</label>
+  <input id="inpFocus" class="input" type="number" min="1" max="120" step="1" />
+  </div>
+  <div>
+  <label>Короткий перерыв (мин)</label>
+  <input id="inpShort" class="input" type="number" min="1" max="60" step="1" />
+  </div>
+  </div>
+  <div class="row">
+  <div>
+  <label>Длинный перерыв (мин)</label>
+  <input id="inpLong" class="input" type="number" min="1" max="60" step="1" />
+  </div>
+  <div>
+  <label>Длинный каждые</label>
+  <select id="selEvery" class="input">
+  <option value="3">3</option>
+  <option value="4" selected>4</option>
+  <option value="5">5</option>
+  </select>
+  </div>
+  </div>
+  <div class="form-row">
+  <label class="switch">
+  <input id="chkAutostart" type="checkbox" />
+  <span class="track"><span class="thumb"></span></span>
+  <span>Автозапуск следующей сессии</span>
+  </label>
+  </div>
+  <div class="form-row">
+  <label class="switch">
+  <input id="chkSound" type="checkbox" />
+  <span class="track"><span class="thumb"></span></span>
+  <span>Звук по завершению</span>
+  </label>
+  </div>
+  <div class="form-row">
+  <span>Громкость</span>
+  <input id="rngVolume" class="range" type="range" min="0" max="1" step="0.01" />
+  </div>
+  <div class="form-row">
+  <label class="switch">
+  <input id="chkTick" type="checkbox" />
+  <span class="track"><span class="thumb"></span></span>
+  <span>Тик каждую секунду</span>
+  </label>
+  </div>
+  <div class="form-row">
+  <button id="btnTestSound" class="btn secondary">Тест звука</button>
+  <button id="btnNotify" class="btn secondary">Проверить уведомление</button>
+  </div>
+  </section>
+  <section class="panel" aria-label="Задачи">
+  <h3 class="section-title">Задачи</h3>
+  <div class="form-row">
+  <input id="taskInput" class="input" placeholder="Новая задача..." />
+  <button id="btnAddTask" class="btn">Добавить</button>
+  </div>
+  <div id="tasks" class="tasks" aria-live="polite"></div>
+  </section>
+  </aside>
+  </div>
+
+  <footer>
+    Помодоро помогает сосредоточиться: работайте по 25 минут, затем отдыхайте 5 минут. Каждые 4 помидорки — длинный перерыв.
+    Сделайте легкую зарядку. Приседания, бег на месте. 
+  </footer>
+
+  <script>
+    // ---- Состояние / LocalStorage
+    const LS_SETTINGS = 'pomodoro_settings_v1';
+    const LS_STATE = 'pomodoro_state_v1';
+    const LS_TASKS = 'pomodoro_tasks_v1';
+    const ringFg = document.getElementById('ringFg');
+    const timeEl = document.getElementById('time');
+    const subnoteEl = document.getElementById('subnote');
+    const topBar = document.getElementById('topBar');
+    
+    const chipFocus = document.getElementById('chipFocus');
+    const chipShort = document.getElementById('chipShort');
+    const chipLong  = document.getElementById('chipLong');
+    
+    const btnStartPause = document.getElementById('btnStartPause');
+    const btnReset = document.getElementById('btnReset');
+    const btnSkip = document.getElementById('btnSkip');
+    
+    const statToday = document.getElementById('statToday');
+    const statFocusTime = document.getElementById('statFocusTime');
+    const statCycle = document.getElementById('statCycle');
+    
+    const inpFocus = document.getElementById('inpFocus');
+    const inpShort = document.getElementById('inpShort');
+    const inpLong  = document.getElementById('inpLong');
+    const selEvery = document.getElementById('selEvery');
+    const chkAutostart = document.getElementById('chkAutostart');
+    const chkSound = document.getElementById('chkSound');
+    const chkTick = document.getElementById('chkTick');
+    const rngVolume = document.getElementById('rngVolume');
+    const btnTestSound = document.getElementById('btnTestSound');
+    const btnNotify = document.getElementById('btnNotify');
+    const themeToggle = document.getElementById('themeToggle');
+    const themeLabel = document.getElementById('themeLabel');
+    
+    const tasksWrap = document.getElementById('tasks');
+    const taskInput = document.getElementById('taskInput');
+    const btnAddTask = document.getElementById('btnAddTask');
+    
+    const defaultSettings = {
+      focusMin: 25, shortMin: 5, longMin: 15, longEvery: 4,
+      autostart: false, sound: true, tick: false, volume: 0.6,
+      theme: 'dark'
+    };
+    let settings = load(LS_SETTINGS, defaultSettings);
+    
+    const defaultState = {
+      mode: 'focus',  // 'focus' | 'short' | 'long'
+      running: false,
+      endAt: 0,       // timestamp ms
+      remainSec: 25*60,
+      cycleCount: 0,  // завершённых фокусов в текущем цикле
+      today: todayKey(),
+      todayPomos: 0,
+      todayFocusSec: 0,
+      activeTaskId: null
+    };
+    let state = normalizeState(load(LS_STATE, defaultState));
+    let tasks = load(LS_TASKS, []);
+    
+    function load(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return structuredClone(fallback);
+        const data = JSON.parse(raw);
+        return Object.assign(structuredClone(fallback), data);
+      } catch {
+        return structuredClone(fallback);
+      }
+    }
+    function save(key, data) {
+      localStorage.setItem(key, JSON.stringify(data));
+    }
+    function todayKey() {
+      const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+    function normalizeState(s) {
+      // если сменился день — обнуляем дневную статистику
+      if (s.today !== todayKey()) {
+        s.today = todayKey();
+        s.todayPomos = 0;
+        s.todayFocusSec = 0;
+      }
+      return s;
+    }
+    
+    // ---- Аудио / Уведомления
+    let audioCtx = null;
+    function ensureAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+    function playBeep(seq = 'end') {
+      if (!settings.sound) return;
+      ensureAudio();
+      const ctx = audioCtx;
+      const now = ctx.currentTime;
+      const v = ctx.createGain();
+      v.gain.value = settings.volume;
+      v.connect(ctx.destination);
+    
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.connect(v);
+    
+      // мелодии
+      const patterns = {
+        end: [880, 988, 1047],         // A5 B5 C6
+        start: [523, 659, 784],        // C5 E5 G5
+        tick: [1200]                   // короткий клик
+      };
+      const freqs = patterns[seq] || patterns.end;
+    
+      let t = now;
+      const step = seq === 'tick' ? 0.02 : 0.12;
+      freqs.forEach((f, idx) => {
+        o.frequency.setValueAtTime(f, t);
+        v.gain.setValueAtTime(settings.volume, t);
+        v.gain.exponentialRampToValueAtTime(0.001, t + step - 0.01);
+        t += step;
+        if (idx === freqs.length - 1) {
+          // небольшой хвост
+          v.gain.setValueAtTime(0.0001, t + 0.02);
+        }
+      });
+      o.start(now);
+      o.stop(now + (seq === 'tick' ? 0.06 : 0.45));
+      o.onended = () => { v.disconnect(); o.disconnect(); };
+    }
+    
+    function notify(title, body) {
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'granted') {
+        const n = new Notification(title, { body });
+        setTimeout(() => n.close(), 4000);
+      }
+    }
+    
+    // ---- Таймер
+    
+    function modeDurationSec(mode) {
+      if (mode === 'focus') return Math.max(1, Number(settings.focusMin)) * 60;
+      if (mode === 'short') return Math.max(1, Number(settings.shortMin)) * 60;
+      return Math.max(1, Number(settings.longMin)) * 60;
+    }
+    function setMode(mode) {
+      state.mode = mode;
+      const dur = modeDurationSec(mode);
+      state.remainSec = dur;
+      state.endAt = 0;
+      state.running = false;
+      save(LS_STATE, state);
+      updateUI();
+    }
+    
+    // Фоновые таймеры для работы в скрытой вкладке
+    let bgIntervalId = null;
+    let endTimeoutId = null;
+    
+    function clearBgTimers() {
+      if (bgIntervalId) { clearInterval(bgIntervalId); bgIntervalId = null; }
+      if (endTimeoutId) { clearTimeout(endTimeoutId); endTimeoutId = null; }
+    }
+    
+    // Проверка дедлайна — вызывается в setInterval/setTimeout и по visibilitychange
+    function checkDeadline() {
+      if (!state.running) return;
+      const remainMs = state.endAt - Date.now();
+      if (remainMs <= 0) {
+        onComplete(false);
+        return;
+      }
+      // Обновляем остаток и UI, чтобы в фоне тики тоже учитывались
+      const sec = Math.max(0, Math.round(remainMs / 1000));
+      if (sec !== state.remainSec) {
+        state.remainSec = sec;
+        save(LS_STATE, state);
+        if (settings.tick && sec > 0) playBeep('tick');
+      }
+      updateUI();
+    }
+    
+    function start() {
+      ensureAudio(); // разблокировать звук
+      if (state.running) return;
+      const dur = modeDurationSec(state.mode);
+      const base = (state.remainSec && state.remainSec > 0) ? state.remainSec : dur;
+    
+      state.endAt = Date.now() + base * 1000;
+      state.running = true;
+      save(LS_STATE, state);
+      window.capNotify?.scheduleEndNotification(state.endAt, state.mode);
+    
+      playBeep('start');
+      loop(); // rAF для активной вкладки
+    
+      // Фоновые таймеры для скрытой вкладки
+      clearBgTimers();
+      endTimeoutId = setTimeout(() => checkDeadline(), base * 1000 + 50);
+      bgIntervalId = setInterval(checkDeadline, 1000);
+    
+      updateUI();
+    }
+    
+    function pause() {
+      if (!state.running) return;
+      // пересчитываем остаток
+      state.remainSec = Math.max(0, Math.round((state.endAt - Date.now()) / 1000));
+      state.endAt = 0;
+      state.running = false;
+    
+      clearBgTimers();
+      window.capNotify?.cancelEndNotification();
+      save(LS_STATE, state);
+      updateUI();
+    }
+    
+    function resetTimer() {
+      state.remainSec = modeDurationSec(state.mode);
+      state.endAt = 0;
+      state.running = false;
+    
+      clearBgTimers();
+      window.capNotify?.cancelEndNotification();
+      save(LS_STATE, state);
+      updateUI();
+    }
+    
+    function skipNext() {
+      // завершить текущую и перейти к следующей
+      onComplete(/*skip=*/true);
+    }
+    
+    function loop() {
+      if (!state.running) {
+        updateUI(); // отрисовать статично
+        return;
+      }
+      const remain = Math.max(0, Math.round((state.endAt - Date.now()) / 1000));
+      if (remain !== state.remainSec) {
+        state.remainSec = remain;
+        // ежесекундный тик
+        if (settings.tick && remain > 0) playBeep('tick');
+      }
+      updateUI();
+    
+      if (remain <= 0) {
+        onComplete(false);
+        return;
+      }
+      requestAnimationFrame(loop);
+    }
+    
+    function onComplete(skipped) {
+      // Очищаем фоновые таймеры текущей сессии
+      clearBgTimers();
+
+      window.capNotify?.cancelEndNotification();
+if (!skipped) {
+  window.capNotify?.presentInstant(
+    'Сессия завершена',
+    (state.mode === 'focus') ? 'Отличная работа! Время отдохнуть.' : 'Перерыв окончен. Вперёд к фокусу!'
+  );
+}
+    
+      // Финализируем режим
+      const justMode = state.mode;
+      const fullDur = modeDurationSec(justMode);
+      const spent = Math.max(0, fullDur - state.remainSec);
+    
+      if (!skipped) {
+        // звук и уведомление
+        playBeep('end');
+        notify('Сессия завершена', justMode === 'focus' ? 'Отличная работа! Время отдохнуть.' : 'Перерыв окончен. Вперёд к фокусу!');
+      }
+    
+      if (justMode === 'focus') {
+        state.cycleCount = (state.cycleCount + 1);
+        state.todayPomos += 1;
+        state.todayFocusSec += spent || fullDur;
+    
+        // зачесть активной задаче
+        if (state.activeTaskId) {
+          const t = tasks.find(x => x.id === state.activeTaskId);
+          if (t) t.pomosDone = (t.pomosDone || 0) + 1;
+          save(LS_TASKS, tasks);
+        }
+      }
+    
+      // Выбор следующего режима
+      let next = 'focus';
+      if (justMode === 'focus') {
+        next = (state.cycleCount % Number(settings.longEvery) === 0) ? 'long' : 'short';
+      } else {
+        next = 'focus';
+      }
+    
+      state.mode = next;
+      state.remainSec = modeDurationSec(next);
+      state.endAt = 0;
+      state.running = false;
+    
+      // сменился день?
+      state = normalizeState(state);
+    
+      save(LS_STATE, state);
+      updateUI();
+    
+      if (settings.autostart) {
+        start(); // стартует новые фоновые таймеры
+      }
+    }
+    
+    // ---- Задачи
+    function renderTasks() {
+      tasksWrap.innerHTML = '';
+      if (!tasks.length) {
+        const empty = document.createElement('div');
+        empty.className = 'subnote';
+        empty.textContent = 'Задач пока нет. Добавьте первую.';
+        tasksWrap.appendChild(empty);
+        updateSubnote();
+        return;
+      }
+      for (const t of tasks) {
+        const div = document.createElement('div');
+        div.className = 'task' + (t.id === state.activeTaskId ? ' active' : '');
+        // checkbox
+        const chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.checked = !!t.done;
+        chk.onchange = () => {
+          t.done = chk.checked;
+          save(LS_TASKS, tasks);
+          renderTasks();
+        };
+        // content
+        const content = document.createElement('div');
+        const title = document.createElement('div');
+        title.className = 'title';
+        title.textContent = t.title;
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = 'Помидорок: ' + (t.pomosDone || 0);
+        content.appendChild(title);
+        content.appendChild(meta);
+    
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+    
+        const btnSel = document.createElement('button');
+        btnSel.className = 'icon-btn';
+        btnSel.textContent = t.id === state.activeTaskId ? 'Активно' : 'Сделать активной';
+        btnSel.onclick = () => {
+          state.activeTaskId = t.id;
+          save(LS_STATE, state);
+          renderTasks();
+        };
+    
+        const btnDel = document.createElement('button');
+        btnDel.className = 'icon-btn';
+        btnDel.textContent = 'Удалить';
+        btnDel.onclick = () => {
+          const idx = tasks.findIndex(x => x.id === t.id);
+          if (idx >= 0) tasks.splice(idx, 1);
+          if (state.activeTaskId === t.id) state.activeTaskId = null;
+          save(LS_TASKS, tasks);
+          save(LS_STATE, state);
+          renderTasks();
+        };
+    
+        actions.appendChild(btnSel);
+        actions.appendChild(btnDel);
+    
+        div.appendChild(chk);
+        div.appendChild(content);
+        div.appendChild(actions);
+        tasksWrap.appendChild(div);
+      }
+      updateSubnote();
+    }
+    function addTask() {
+      const title = (taskInput.value || '').trim();
+      if (!title) return;
+      const t = {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(),
+        title, pomosDone: 0, done: false
+      };
+      tasks.unshift(t);
+      if (!state.activeTaskId) state.activeTaskId = t.id;
+      taskInput.value = '';
+      save(LS_TASKS, tasks);
+      save(LS_STATE, state);
+      renderTasks();
+    }
+    
+    // ---- UI обновление
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    }
+    function updateSubnote() {
+      const active = tasks.find(t => t.id === state.activeTaskId);
+      const taskText = active ? active.title : '—';
+      const modeText = state.mode === 'focus' ? 'Фокус' : (state.mode === 'short' ? 'Короткий перерыв' : 'Длинный перерыв');
+      subnoteEl.textContent = modeText + '. Текущая задача: ' + taskText;
+    }
+    function updateChips() {
+      chipFocus.classList.toggle('active', state.mode === 'focus');
+      chipShort.classList.toggle('active', state.mode === 'short');
+      chipLong.classList.toggle('active', state.mode === 'long');
+    }
+    function updateRing() {
+      const total = modeDurationSec(state.mode);
+      const remain = state.running ? Math.max(0, Math.round((state.endAt - Date.now())/1000)) : state.remainSec;
+      const progress = 1 - (remain / total);
+      const r = 150;
+      const C = 2 * Math.PI * r; // ~942
+      ringFg.setAttribute('stroke-dasharray', String(C));
+      ringFg.setAttribute('stroke-dashoffset', String(C * (1 - progress)));
+      topBar.style.width = (progress * 100).toFixed(2) + '%';
+    }
+    function updateStats() {
+      statToday.textContent = String(state.todayPomos);
+      const sec = state.todayFocusSec;
+      statFocusTime.textContent = formatTime(sec);
+      statCycle.textContent = (state.cycleCount % Number(settings.longEvery) + 1) + ' / ' + settings.longEvery;
+    }
+    function updateButtons() {
+      btnStartPause.textContent = state.running ? 'Пауза' : 'Старт';
+    }
+    function updateInputs() {
+      inpFocus.value = settings.focusMin;
+      inpShort.value = settings.shortMin;
+      inpLong.value = settings.longMin;
+      selEvery.value = String(settings.longEvery);
+      chkAutostart.checked = !!settings.autostart;
+      chkSound.checked = !!settings.sound;
+      chkTick.checked = !!settings.tick;
+      rngVolume.value = settings.volume;
+      const isLight = settings.theme === 'light';
+      document.body.classList.toggle('light', isLight);
+      themeToggle.checked = isLight;
+      themeLabel.textContent = isLight ? 'Светлая' : 'Тёмная';
+    }
+    function updateUI() {
+      updateChips();
+      updateRing();
+      const remain = state.running ? Math.max(0, Math.round((state.endAt - Date.now())/1000)) : state.remainSec;
+      timeEl.textContent = formatTime(remain);
+      updateButtons();
+      updateStats();
+      updateSubnote();
+      document.title = (state.mode === 'focus' ? '🎯' : '☕') + ' ' + timeEl.textContent + ' — Помодоро';
+    }
+    
+    // ---- События UI
+    chipFocus.onclick = () => setMode('focus');
+    chipShort.onclick = () => setMode('short');
+    chipLong.onclick = () => setMode('long');
+    
+    btnStartPause.onclick = () => state.running ? pause() : start();
+    btnReset.onclick = () => resetTimer();
+    btnSkip.onclick = () => skipNext();
+    
+    inpFocus.onchange = () => { settings.focusMin = clampInt(inpFocus.value, 1, 120); save(LS_SETTINGS, settings); if (!state.running && state.mode==='focus') resetTimer(); };
+    inpShort.onchange = () => { settings.shortMin = clampInt(inpShort.value, 1, 60); save(LS_SETTINGS, settings); if (!state.running && state.mode==='short') resetTimer(); };
+    inpLong.onchange  = () => { settings.longMin  = clampInt(inpLong.value, 1, 60); save(LS_SETTINGS, settings); if (!state.running && state.mode==='long') resetTimer(); };
+    selEvery.onchange = () => { settings.longEvery = clampInt(selEvery.value, 2, 8); save(LS_SETTINGS, settings); updateStats(); };
+    chkAutostart.onchange = () => { settings.autostart = chkAutostart.checked; save(LS_SETTINGS, settings); };
+    chkSound.onchange = () => { settings.sound = chkSound.checked; save(LS_SETTINGS, settings); };
+    chkTick.onchange = () => { settings.tick = chkTick.checked; save(LS_SETTINGS, settings); };
+    rngVolume.oninput = () => { settings.volume = Number(rngVolume.value); save(LS_SETTINGS, settings); };
+    
+    btnTestSound.onclick = () => { ensureAudio(); playBeep('end'); };
+    btnNotify.onclick = async () => {
+  await window.capNotify?.initNotifications();
+  await window.capNotify?.presentInstant('Проверка уведомлений', 'Уведомления работают!');
+};
+    
+    themeToggle.onchange = () => {
+      settings.theme = themeToggle.checked ? 'light' : 'dark';
+      save(LS_SETTINGS, settings);
+      updateInputs();
+      updateUI();
+    };
+    
+    btnAddTask.onclick = addTask;
+    taskInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addTask();
+    });
+    
+    // Горячие клавиши
+    window.addEventListener('keydown', (e) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target.tagName || '').toUpperCase())) return;
+      if (e.code === 'Space') { e.preventDefault(); state.running ? pause() : start(); }
+      if (e.code === 'KeyR') { e.preventDefault(); resetTimer(); }
+      if (e.code === 'KeyN') { e.preventDefault(); skipNext(); }
+      if (e.key === '1') setMode('focus');
+      if (e.key === '2') setMode('short');
+      if (e.key === '3') setMode('long');
+    });
+    
+    // При возврате на вкладку — сразу синхронизируемся
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkDeadline();
+      }
+    });
+    
+    function clampInt(v, min, max) {
+      const n = Math.floor(Number(v) || 0);
+      return Math.max(min, Math.min(max, n));
+    }
+    
+    // ---- Инициализация
+    function init() {
+      window.capNotify?.initNotifications();
+      // Если таймер должен быть запущен (после перезагрузки страницы)
+      if (state.running && state.endAt > Date.now()) {
+        loop(); // rAF для активной вкладки
+    
+        // Поднять фоновые таймеры на остаток
+        clearBgTimers();
+        const remain = Math.max(0, Math.round((state.endAt - Date.now()) / 1000));
+        endTimeoutId = setTimeout(() => checkDeadline(), remain * 1000 + 50);
+        bgIntervalId = setInterval(checkDeadline, 1000);
+    
+      } else if (state.running) {
+        // просрочился — завершить
+        onComplete(true);
+      }
+      updateInputs();
+      renderTasks();
+      updateUI();
+    }
+    init();
+    </script>
+</body>
+</html>
