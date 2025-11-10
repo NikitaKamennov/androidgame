@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Tetris</string>
-    <string name="title_activity_main">Tetris</string>
-    <string name="package_name">com.example.tetris</string>
-    <string name="custom_url_scheme">com.example.tetris</string>
+    <string name="app_name">Tanki</string>
+    <string name="title_activity_main">Tanki</string>
+    <string name="package_name">com.example.tanki</string>
+    <string name="custom_url_scheme">com.example.tanki</string>
 </resources>

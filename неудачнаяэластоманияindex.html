@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Elasto-like Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <style>
+    :root{
+      --bg:#0d1118;
+      --panel:#151a24;
+      --panel-2:#1a2030;
+      --text:#e8ecff;
+      --muted:#9aa4c7;
+      --accent:#7c9fff;
+      --accent-2:#00d4ff;
+      --border:#2c3657;
+      --shadow:0 10px 40px rgba(0,0,0,0.35);
+      --btn:clamp(44px, 10vw, 56px);
+      --gap:10px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 480px at 10% -10%, rgba(0,212,255,0.10), transparent 60%),
+        radial-gradient(900px 480px at 90% 0%, rgba(124,159,255,0.10), transparent 60%),
+        linear-gradient(180deg, var(--bg), #0e1226 60%, var(--bg));
+      -webkit-tap-highlight-color: transparent;
+    }
+    .app{
+      min-height: 100dvh;
+      display:flex;
+      flex-direction:column;
+      padding: 12px 12px calc(env(safe-area-inset-bottom) + 12px);
+      gap: 12px;
+    }
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:14px;
+      box-shadow:var(--shadow);
+      padding:12px;
+    }
+    .row{ display:grid; gap:12px; }
+    h1{ margin:0 0 8px; font-size:20px; }
+    h2{ margin:0 0 8px; font-size:16px; color:var(--muted); }
+    .muted{ color:var(--muted); font-size:13px; }
+    .levels{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap:10px;
+    }
+    .level-card{
+      background:var(--panel-2);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:10px;
+      display:grid;
+      gap:6px;
+    }
+    .level-card h3{ margin:0; font-size:15px; }
+    .tbtn{
+      display:inline-grid;
+      place-items:center;
+      height:40px;
+      padding:0 12px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background: linear-gradient(180deg, #2a3353, #202742);
+      color:#eaf0ff;
+      font-weight:700;
+      letter-spacing:.2px;
+      cursor:pointer;
+      box-shadow:var(--shadow);
+      font-size:14px;
+      user-select:none;
+    }
+    .tbtn.primary{ background: linear-gradient(135deg, var(--accent), var(--accent-2)); color:#001221; border:none; }
+    .tbtn:active{ transform: translateY(1px); filter: brightness(0.96); }
+
+    /* Game view */
+    .game{
+      display:grid;
+      grid-template-rows: auto auto auto;
+      gap:10px;
+    }
+    .game-wrap{
+      position:relative;
+      display:grid;
+      place-items:center;
+      background:var(--panel-2);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:8px;
+      overflow:hidden;
+    }
+    canvas#game{
+      display:block;
+      background:#0c0f18;
+      border-radius:10px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 10px 30px rgba(0,0,0,0.35);
+      width:100%;
+      height:auto;
+      aspect-ratio: 16 / 9;
+    }
+    .hud{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap:8px; font-size:13px; color:var(--muted);
+    }
+    .hud > div{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    /* Controls (mobile) */
+    .controls{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: var(--gap);
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:10px;
+      box-shadow:var(--shadow);
+      user-select:none; touch-action:none;
+    }
+    .controls .col{ display:grid; gap:var(--gap); }
+    .controls .big{ height: var(--btn); font-size:16px; }
+    .controls .stack{ display:grid; grid-template-rows: var(--btn) var(--btn); gap: var(--gap); }
+    .controls .row2{ display:grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+    .controls .wide{ grid-column: span 2; }
+
+    .status{
+      padding:10px;
+      background: rgba(124,159,255,0.10);
+      border:1px solid rgba(124,159,255,0.30);
+      border-radius:10px;
+      min-height:20px;
+      color:#e8ecff;
+      font-size:13px;
+    }
+
+    .footer{
+      display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;
+    }
+
+    /* Modal */
+    .modal{ position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:1000; }
+    .modal.open{ display:flex; }
+    .modal-content{
+      width:90%; max-width:480px;
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:16px;
+      box-shadow:var(--shadow);
+    }
+    .modal-content h3{ margin:0 0 8px; font-size:18px; }
+    .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Лобби -->
+    <section id="screenLobby" class="panel">
+      <h1>Elasto-like — Лобби</h1>
+      <div class="muted">Выберите уровень. Задача: собрать все яблоки и коснуться ромашки как можно быстрее.</div>
+      <div id="levels" class="levels" style="margin-top:10px;"></div>
+    </section>
+
+    <!-- Игра -->
+    <section id="screenGame" class="game" style="display:none;">
+      <div class="game-wrap">
+        <canvas id="game" width="1280" height="720"></canvas>
+      </div>
+
+      <div class="hud">
+        <div id="hudLevel">Уровень: —</div>
+        <div id="hudTime">Время: 00:00.000</div>
+        <div id="hudApples">Яблоки: 0/0</div>
+      </div>
+
+      <!-- Экранные кнопки -->
+      <div class="controls">
+        <!-- Левая колонка: наклон -->
+        <div class="col">
+          <button id="btnLeanLeft" class="tbtn big">⟲ Наклон ←</button>
+          <button id="btnLeanRight" class="tbtn big">⟳ Наклон →</button>
+        </div>
+        <!-- Центр: рестарт/в лобби -->
+        <div class="col">
+          <div class="stack">
+            <button id="btnRestart" class="tbtn">⟲ Рестарт (R)</button>
+            <button id="btnLobby" class="tbtn">↩ В лобби (Esc)</button>
+          </div>
+        </div>
+        <!-- Правая колонка: газ/тормоз -->
+        <div class="col">
+          <button id="btnThrottle" class="tbtn big primary">▲ Газ</button>
+          <button id="btnBrake" class="tbtn big">▼ Тормоз</button>
+        </div>
+      </div>
+
+      <div id="status" class="status">Управление: стрелки (↑ газ, ↓ тормоз, ←/→ наклон), R — рестарт, Esc — лобби.</div>
+    </section>
+
+    <div class="footer">
+      <button id="btnShowHelp" class="tbtn">Справка</button>
+    </div>
+  </div>
+
+  <!-- Модалка -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-content">
+      <h3 id="modalTitle">Заголовок</h3>
+      <div id="modalText" class="muted">Описание</div>
+      <div id="modalExtra" class="muted" style="margin-top:6px;"></div>
+      <div class="modal-actions">
+        <button id="modalOk" class="tbtn primary">ОК</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Вспомогательная математика ----------
+    const V = {
+      add:(a,b)=>({x:a.x+b.x, y:a.y+b.y}),
+      sub:(a,b)=>({x:a.x-b.x, y:a.y-b.y}),
+      mul:(a,s)=>({x:a.x*s, y:a.y*s}),
+      dot:(a,b)=> a.x*b.x + a.y*b.y,
+      len:(a)=> Math.hypot(a.x, a.y),
+      norm:(a)=>{ const l=Math.hypot(a.x,a.y)||1; return {x:a.x/l, y:a.y/l}; },
+      projScalar:(a, b)=> V.dot(a,b) / (V.len(b)||1),
+      clamp:(x, lo, hi)=> Math.max(lo, Math.min(hi, x)),
+      dist:(a,b)=> Math.hypot(a.x-b.x, a.y-b.y),
+      perp:(a)=>({x:-a.y, y:a.x})
+    };
+
+    // ---------- Данные уровней (массив) ----------
+    const levels = [
+      {
+        id: 'lvl1',
+        name: 'Учебный склон',
+        author: 'Demo',
+        start: { x: 0, y: 2.0, facing: 1 },
+        // Полилинии (в метрах). Координаты — мировые (право=X+, вниз=Y+).
+        segments: [
+          // Платформа старта
+          [ {x:-2, y:3}, {x: 3, y:3} ],
+          // Небольшой спуск и трамплин
+          [ {x:3, y:3}, {x:6, y:4}, {x:10, y:4.2}, {x:14, y:3.2} ],
+          // Яма
+          [ {x:14, y:3.2}, {x:16, y:5.5}, {x:18, y:5.2}, {x:20, y:3.4} ],
+          // Финишная полка
+          [ {x:20, y:3.4}, {x:24, y:3.0}, {x:28, y:3.0} ],
+        ],
+        apples: [
+          {x:5.0, y:2.2}, {x:12.5, y:2.4}, {x:17.0, y:4.0}
+        ],
+        flower: {x: 27.5, y: 2.4}
+      }
+      // Добавляйте новые уровни здесь.
+    ];
+
+    // ---------- Состояние приложения ----------
+    const State = {
+      screen: 'lobby', // 'lobby' | 'game'
+      levelIndex: 0,
+      running: false,
+      startedAt: 0, // performance.now()
+      timeMs: 0,
+      applesCollected: 0,
+      bestTimesKey: 'elasto_best_times', // per-level, мс
+    };
+
+    // ---------- DOM ----------
+    const screenLobby = document.getElementById('screenLobby');
+    const screenGame  = document.getElementById('screenGame');
+    const levelsEl    = document.getElementById('levels');
+    const statusEl    = document.getElementById('status');
+    const hudLevel    = document.getElementById('hudLevel');
+    const hudTime     = document.getElementById('hudTime');
+    const hudApples   = document.getElementById('hudApples');
+
+    const btnShowHelp = document.getElementById('btnShowHelp');
+
+    // Controls
+    const btnLeanLeft = document.getElementById('btnLeanLeft');
+    const btnLeanRight= document.getElementById('btnLeanRight');
+    const btnThrottle = document.getElementById('btnThrottle');
+    const btnBrake    = document.getElementById('btnBrake');
+    const btnRestart  = document.getElementById('btnRestart');
+    const btnLobby    = document.getElementById('btnLobby');
+
+    // Modal
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalText  = document.getElementById('modalText');
+    const modalExtra = document.getElementById('modalExtra');
+    const modalOk    = document.getElementById('modalOk');
+
+    // Canvas
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    // ---------- Рендер лобби ----------
+    function renderLobby(){
+      levelsEl.innerHTML = '';
+      levels.forEach((lvl, idx)=>{
+        const card = document.createElement('div');
+        card.className = 'level-card';
+        const h3 = document.createElement('h3'); h3.textContent = lvl.name;
+        const meta = document.createElement('div'); meta.className = 'muted'; meta.textContent = 'Автор: ' + (lvl.author || '—');
+        const btn = document.createElement('button'); btn.className = 'tbtn primary'; btn.textContent = 'Старт';
+        btn.onclick = ()=> startLevel(idx);
+        card.appendChild(h3); card.appendChild(meta); card.appendChild(btn);
+        levelsEl.appendChild(card);
+      });
+    }
+
+    // ---------- Переходы экранов ----------
+    function showScreen(name){
+      State.screen = name;
+      if(name === 'lobby'){
+        screenLobby.style.display = '';
+        screenGame.style.display  = 'none';
+      } else {
+        screenLobby.style.display = 'none';
+        screenGame.style.display  = '';
+      }
+    }
+
+    // ---------- Хранилище лучших времен ----------
+    function loadBestTimes(){
+      try { const raw = localStorage.getItem(State.bestTimesKey); const obj = raw ? JSON.parse(raw) : {}; return obj && typeof obj==='object' ? obj : {}; }
+      catch { return {}; }
+    }
+    function saveBestTimes(obj){
+      localStorage.setItem(State.bestTimesKey, JSON.stringify(obj));
+    }
+    function updateBestTime(levelId, timeMs){
+      const obj = loadBestTimes();
+      const prev = obj[levelId];
+      if(!prev || timeMs < prev) obj[levelId] = timeMs;
+      saveBestTimes(obj);
+      return obj[levelId];
+    }
+    function formatTime(ms){
+      const t = Math.max(0, Math.round(ms));
+      const m = Math.floor(t / 60000);
+      const s = Math.floor((t % 60000) / 1000);
+      const ms3 = t % 1000;
+      const mm = String(m).padStart(2,'0');
+      const ss = String(s).padStart(2,'0');
+      const mss = String(ms3).padStart(3,'0');
+      return `${mm}:${ss}.${mss}`;
+    }
+
+    // ---------- Физика/мир ----------
+              // м/с^2
+             // пикселей на метр
+     // фиксированный шаг интеграции
+           // можно увеличить до 2 для стабилизации
+    const AIR_DAMP = 0.995;        // воздушное демпфирование
+    const GROUND_RESTITUTION = 0.05;// упругость удара
+    const GROUND_FRICTION = 0.85;   // трение вдоль касательной (демпф)
+    const ENGINE_ACCEL = 20.0;      // м/с^2 по касательной для заднего колеса (при полном газе)
+    const MAX_ENGINE_SPEED = 20.0;  // ограничение линейной скорости вдоль касательной
+            // масса каждого колеса, кг
+    const FRAME_M = 7.0;            // масса рамы+райдера, кг
+    const STRUT_K = 800.0;          // жёсткость стойки (Н/м)
+    const STRUT_C = 30.0;           // демпфирование стойки
+    const BASE_K  = 1200.0;         // жёсткость между колёсами
+    const BASE_C  = 40.0;           // демпф между колёсами
+    const STRUT_REAR_REST = 0.50;   // базовая длина стойки задней, м
+    const STRUT_FRONT_REST= 0.50;   // базовая длина стойки передней, м
+   // базовая база, м
+    const LEAN_DELTA       = 0.08;  // изменение целевых длин стоек при наклоне
+    const FRAME_R          = 0.22;  // радиус “головы/рамы” для контакта
+      // порог смертельной нормальной скорости столкновения рамы, м/с
+
+const G = 9.81;               // м/с^2
+const SCALE = 60;             // пикселей на метр
+const FIXED_DT = 1/120;       // фиксированный шаг
+const SUB_STEPS = 1;          // доп. субшаги интеграции
+
+// Итерации контактного решателя
+const ITER_CONTACTS = 6;
+
+// Материалы/трение
+const MU_DEFAULT = 0.9;       // коэффициент трения (сухой асфальт)
+const RESTITUTION = 0.02;     // упругость удара (очень малая)
+const ROLLING_RESIST = 0.995; // лёгкое сопротивление качению (демпф ω)
+
+// Параметры колёс/двигателя
+const WHEEL_R = 0.36;         // радиус колеса, м
+const WHEEL_M = 10.0;         // масса колеса, кг
+const WHEEL_I = 0.5 * WHEEL_M * WHEEL_R * WHEEL_R; // цилиндр
+const ENGINE_TORQUE = 120.0;  // Н*м (газ/тормоз)
+const MAX_OMEGA = 180.0;      // рад/с ограничитель ω
+
+// База (расстояние между колёсами)
+const WHEELBASE_REST = 1.20;  // м
+
+// Наклон райдера (крутящий эффект)
+const LEAN_ACCEL = 10.0;      // эквивалентное “крутящему” ускорение (м/с^2)
+
+// Голова/шлем
+const HEAD_OFFSET = 0.42;     // смещение головы перпендикулярно оси колёс, м
+const HEAD_R = 0.18;          // радиус шлема, м
+const HEAD_CRASH_SPEED = 6.5; // порог смертельной нормальной скорости, м/с
+
+    // Состояние байка/мира
+    let world = null;
+    function makeVec(x=0,y=0){ return {x,y}; }
+
+
+
+// ====== initWorld (ЗАМЕНИТЕ ПОЛНОСТЬЮ) ======
+function initWorld(level){
+  const rear = { p: {x: level.start.x - 0.6*level.start.facing, y: level.start.y}, v: {x:0,y:0}, r: WHEEL_R, m: WHEEL_M, ang: 0, omega: 0, contact: null };
+  const front= { p: {x: level.start.x + 0.6*level.start.facing, y: level.start.y}, v: {x:0,y:0}, r: WHEEL_R, m: WHEEL_M, ang: 0, omega: 0, contact: null };
+  const w = {
+    rear, front,
+    segments: level.segments,
+    apples: level.apples.map(a=> ({x:a.x, y:a.y, taken:false})),
+    flower: {x:level.flower.x, y:level.flower.y},
+    wheelbaseRest: WHEELBASE_REST,
+    boundsY: 50,
+    headP: {x: (rear.p.x+front.p.x)/2, y: (rear.p.y+front.p.y)/2 - HEAD_OFFSET},
+    headPrev: null
+  };
+  w.headPrev = {x: w.headP.x, y: w.headP.y};
+  return w;
+}
+
+
+
+
+// ====== ДОБАВЬТЕ ПОСЛЕ circleSegmentContact ======
+
+// Лучший контакт для колеса: максимальная пенетрация
+function findBestContact(center, radius, segments){
+  let best = null;
+  for (const poly of segments) {
+    for (let i=0; i<poly.length-1; i++) {
+      const A = poly[i], B = poly[i+1];
+      const c = circleSegmentContact(center, radius, A, B);
+      if (!c) continue;
+      if (!best || c.pen > best.pen) best = c;
+    }
+  }
+  return best;
+}
+
+// Импульсный решатель контакта для колеса (нормаль + трение/роллинг)
+function solveWheelGroundContact(body, contact, dt, mu = MU_DEFAULT){
+  // Позиционная коррекция по нормали
+  if (contact.pen > 0){
+    body.p.x += contact.n.x * (contact.pen * 0.9);
+    body.p.y += contact.n.y * (contact.pen * 0.9);
+  }
+
+  // Скорость по нормали
+  const v_n = body.v.x*contact.n.x + body.v.y*contact.n.y;
+  if (v_n < 0){
+    const invM = 1 / body.m;
+    const jn = -(1 + RESTITUTION) * v_n / invM;
+    body.v.x += contact.n.x * (jn * invM);
+    body.v.y += contact.n.y * (jn * invM);
+    body.__lastNormalImpulse = jn;
+  } else {
+    body.__lastNormalImpulse = 0;
+  }
+
+  // Трение/роллинг: vt (линейная) и ω*r (вращение)
+  const vt = body.v.x*contact.t.x + body.v.y*contact.t.y;
+  const slip = vt - body.omega * body.r;
+
+  // Ограничение трения
+  const invM = 1 / body.m;
+  const invI = 1 / WHEEL_I;
+  const denom = invM + (body.r*body.r) * invI;
+
+  let jt = -slip / (denom || 1);
+  const normalImpulse = body.__lastNormalImpulse || (body.m * G * dt); // fallback
+  const jtMax = mu * normalImpulse;
+  jt = Math.max(-jtMax, Math.min(jt, jtMax));
+
+  // Применяем импульс по касательной и соответствующий крутящий момент
+  body.v.x += contact.t.x * (jt * invM);
+  body.v.y += contact.t.y * (jt * invM);
+
+  // Знак момента зависит от ориентации (n x t)
+  const sgn = (contact.n.x*contact.t.y - contact.n.y*contact.t.x) >= 0 ? 1 : -1;
+  body.omega += (-jt * body.r * sgn) * invI;
+
+  // Лёгкое сопротивление качению
+  body.omega *= ROLLING_RESIST;
+}
+
+// Жёсткий констрейнт базы (позиция + корректировка скоростей)
+function solveDistanceConstraint(rear, front){
+  const d = { x: front.p.x - rear.p.x, y: front.p.y - rear.p.y };
+  const dist = Math.hypot(d.x, d.y) || 1e-6;
+  const n = { x: d.x / dist, y: d.y / dist };
+  const C = dist - WHEELBASE_REST;
+
+  // Позиционная коррекция поровну
+  const corr = -C * 0.5;
+  rear.p.x += n.x * corr; rear.p.y += n.y * corr;
+  front.p.x -= n.x * corr; front.p.y -= n.y * corr;
+
+  // Скоростная коррекция (убрать относит. скорость вдоль n)
+  const rv = { x: front.v.x - rear.v.x, y: front.v.y - rear.v.y };
+  const rvn = rv.x*n.x + rv.y*n.y;
+  const invMsum = (1/rear.m) + (1/front.m);
+  const j = -rvn / (invMsum || 1);
+  rear.v.x -= n.x * (j / rear.m); rear.v.y -= n.y * (j / rear.m);
+  front.v.x += n.x * (j / front.m); front.v.y += n.y * (j / front.m);
+}
+
+// Позиция головы/шлема из оси колёс
+function computeHead(rear, front){
+  const mid = { x: (rear.p.x + front.p.x)/2, y: (rear.p.y + front.p.y)/2 };
+  const axis = V.norm({ x: front.p.x - rear.p.x, y: front.p.y - rear.p.y });
+  const up = { x: -axis.y, y: axis.x }; // перпендикуляр (вверх от оси)
+  return { x: mid.x + up.x * HEAD_OFFSET, y: mid.y + up.y * HEAD_OFFSET };
+}
+
+
+    // Контролы (состояния)
+    const Input = { throttle: false, brake:false, leanLeft:false, leanRight:false };
+
+    // Физика: столкновение “круг↔отрезок”, возвращает данные контакта либо null
+    function circleSegmentContact(center, radius, A, B){
+      const AB = V.sub(B, A);
+      const AB2 = AB.x*AB.x + AB.y*AB.y;
+      if(AB2 === 0) return null;
+      const t = V.clamp( ((center.x - A.x)*AB.x + (center.y - A.y)*AB.y) / AB2, 0, 1 );
+      const P = { x: A.x + AB.x*t, y: A.y + AB.y*t };
+      const diff = V.sub(center, P);
+      const dist = V.len(diff);
+      const pen = radius - dist;
+      if (pen > 0) {
+        const n = dist>1e-6 ? V.mul(diff, 1/dist) : V.norm(V.perp(AB)); // нормаль наружу
+        const tdir = V.norm(AB); // касательная вдоль сегмента
+        return { P, n, t: tdir, pen, dist };
+      }
+      return null;
+    }
+
+    // Разрешение контакта для круга (позиция+скорость)
+    function resolveCircleTerrain(body, segments){
+      let contact = null;
+      for (const poly of segments) {
+        for (let i=0; i<poly.length-1; i++) {
+          const A = poly[i], B = poly[i+1];
+          const c = circleSegmentContact(body.p, body.r, A, B);
+          if (!c) continue;
+          // Выносим из поверхности по нормали
+          body.p.x += c.n.x * c.pen;
+          body.p.y += c.n.y * c.pen;
+          // Проекция скорости: убираем компоненту по нормали (c ударом)
+          const vn = body.v.x * c.n.x + body.v.y * c.n.y;
+          const vt = body.v.x * c.t.x + body.v.y * c.t.y;
+          const vnAfter = -GROUND_RESTITUTION * vn;
+          body.v.x = c.t.x * vt + c.n.x * vnAfter;
+          body.v.y = c.t.y * vt + c.n.y * vnAfter;
+          // Тангенциальное демпфирование (трение)
+          const vtAfter = vt * GROUND_FRICTION;
+          body.v.x = c.t.x * vtAfter + c.n.x * (body.v.x * c.n.x + body.v.y * c.n.y);
+          body.v.y = c.t.y * vtAfter + c.n.y * (body.v.x * c.n.x + body.v.y * c.n.y);
+          // Сохраним последний контакт (для тяги/рендера)
+          contact = c;
+        }
+      }
+      return contact;
+    }
+
+    // Пружина-демпфер (позиции+скорости), возвращает ничего (мутирует vel)
+    function spring(bodyA, bodyB, restLen, k, c, dt){
+      const d = V.sub(bodyA.p, bodyB.p);
+      const dist = V.len(d) || 1e-6;
+      const n = { x: d.x/dist, y: d.y/dist };
+      const relVel = (bodyA.v.x - bodyB.v.x)*n.x + (bodyA.v.y - bodyB.v.y)*n.y;
+      const x = dist - restLen;
+      const F = -k*x - c*relVel;
+      // Ускорения: a = F/m
+      // Массы: рама/колеса
+      const mA = bodyA.m || FRAME_M;
+      const mB = bodyB.m || WHEEL_M;
+      const aA = F / mA;
+      const aB = -F / mB;
+      bodyA.v.x += aA * n.x * dt;
+      bodyA.v.y += aA * n.y * dt;
+      bodyB.v.x += aB * n.x * dt;
+      bodyB.v.y += aB * n.y * dt;
+    }
+
+    // Один шаг физики
+    // ====== physicsStep (ЗАМЕНИТЕ ПОЛНОСТЬЮ) ======
+function physicsStep(w, dt){
+  const rear = w.rear, front = w.front;
+
+  // 1) Гравитация + демпф воздуха
+  for (const b of [rear, front]) {
+    b.v.y += G * dt;
+    b.v.x *= 0.9995; // лёгкий воздух
+    b.v.y *= 0.9995;
+  }
+
+  // 2) Двигатель (крутящий момент) только при контакте заднего колеса
+  const hasRearContact = !!rear.contact;
+  if (hasRearContact){
+    let tau = 0;
+    if (Input.throttle) tau += ENGINE_TORQUE;
+    if (Input.brake)    tau -= ENGINE_TORQUE * 0.7;
+    const alpha = tau / WHEEL_I;
+    rear.omega += alpha * dt;
+  }
+
+  // 3) Наклон райдера (как пара противоположных вертикальных импульсов)
+  if (Input.leanLeft || Input.leanRight){
+    const dir = Input.leanRight ? +1 : -1;
+    const dv = LEAN_ACCEL * dt * dir;
+    // Пытаемся “крутить” байк: перед вниз, зад вверх (или наоборот)
+    rear.v.y -= dv;
+    front.v.y += dv;
+  }
+
+  // 4) Интеграция позиций и углов
+  for (const b of [rear, front]) {
+    b.p.x += b.v.x * dt;
+    b.p.y += b.v.y * dt;
+    b.omega = Math.max(-MAX_OMEGA, Math.min(MAX_OMEGA, b.omega));
+    b.ang += b.omega * dt;
+  }
+
+  // 5) Контакты с землёй (находим лучший контакт для каждого колеса)
+  rear.contact = findBestContact(rear.p, rear.r, w.segments);
+  front.contact= findBestContact(front.p, front.r, w.segments);
+
+  // 6) Итеративный решатель: контакты + констрейнт базы
+  for (let it=0; it<ITER_CONTACTS; it++){
+    if (rear.contact)  solveWheelGroundContact(rear, rear.contact, dt);
+    if (front.contact) solveWheelGroundContact(front, front.contact, dt);
+    solveDistanceConstraint(rear, front);
+  }
+
+  // 7) Голова/шлем: позиция и проверка “смертельного” удара
+  const prevHead = { x: w.headP.x, y: w.headP.y };
+  w.headP = computeHead(rear, front);
+  const headVel = { x: (w.headP.x - prevHead.x) / dt, y: (w.headP.y - prevHead.y) / dt };
+  const headC = findBestContact(w.headP, HEAD_R, w.segments);
+  if (headC){
+    const vn = headVel.x*headC.n.x + headVel.y*headC.n.y;
+    if (vn < -HEAD_CRASH_SPEED) { onCrash(); return; }
+    // Мягкая позиционная коррекция, чтоб шлем не “въедался” визуально
+    if (headC.pen > 0){
+      w.headP.x += headC.n.x * (headC.pen * 0.5);
+      w.headP.y += headC.n.y * (headC.pen * 0.5);
+    }
+  }
+  w.headPrev = prevHead;
+
+  // 8) Границы мира — смерть при падении
+  const midY = (rear.p.y + front.p.y) * 0.5;
+  if (midY > w.boundsY) { onCrash(); return; }
+
+  // 9) Сбор яблок
+  for (const a of w.apples) {
+    if (a.taken) continue;
+    const rPick = 0.32; // радиус подбора
+    const near =
+      V.dist(a, rear.p) < rPick || V.dist(a, front.p) < rPick || V.dist(a, w.headP) < rPick;
+    if (near) {
+      a.taken = true;
+      State.applesCollected++;
+      updateHUD();
+    }
+  }
+
+  // 10) Финиш: все яблоки собраны и касание ромашки
+  if (w.apples.every(a=>a.taken)) {
+    const rGoal = 0.42;
+    const nearGoal =
+      V.dist(w.flower, rear.p) < rGoal || V.dist(w.flower, front.p) < rGoal || V.dist(w.flower, w.headP) < rGoal;
+    if (nearGoal) { onFinish(); return; }
+  }
+}
+
+    // ---------- Рендер ----------
+    // Камера (мировые координаты -> экран)
+    const camera = { x:0, y:0, scale:SCALE };
+    function worldToScreen(pt){
+      return {
+        x: (pt.x - camera.x) * camera.scale + canvas.width/2,
+        y: (pt.y - camera.y) * camera.scale + canvas.height/2
+      };
+    }
+    function drawCircle(x, y, r, color, stroke='#000', lw=1){
+      const p = worldToScreen({x,y});
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r*camera.scale, 0, Math.PI*2);
+      ctx.fillStyle = color; ctx.fill();
+      if (lw>0){ ctx.lineWidth = lw; ctx.strokeStyle = stroke; ctx.stroke(); }
+    }
+    function draw(){
+      // Очистка фона
+      ctx.fillStyle = '#0c0f18';
+      ctx.fillRect(0,0,canvas.width, canvas.height);
+
+      if (!world) return;
+      const {rear, front, frame} = world;
+
+      // Камера следует за рамой
+      const camTarget = world ? world.headP : {x:0,y:0};
+camera.x += (camTarget.x - camera.x) * 0.08;
+camera.y += (camTarget.y - camera.y) * 0.08;
+
+      // Сетка (необязательно)
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 1;
+      for(let gx=-100; gx<=100; gx+=1){
+        const a = worldToScreen({x:gx,y:-100});
+        const b = worldToScreen({x:gx,y:100});
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+      for(let gy=-100; gy<=100; gy+=1){
+        const a = worldToScreen({x:-100,y:gy});
+        const b = worldToScreen({x:100,y:gy});
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+
+      // Трек (сегменты)
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#7fb2ff';
+      ctx.shadowColor = '#000'; ctx.shadowBlur = 0;
+      for (const poly of world.segments) {
+        for (let i=0; i<poly.length-1; i++) {
+          const A = worldToScreen(poly[i]);
+          const B = worldToScreen(poly[i+1]);
+          ctx.beginPath();
+          ctx.moveTo(A.x, A.y);
+          ctx.lineTo(B.x, B.y);
+          ctx.stroke();
+        }
+      }
+
+      // Яблоки
+      for (const a of world.apples) {
+        if (a.taken) continue;
+        const p = worldToScreen(a);
+        const r = 0.20 * camera.scale;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r, 0, Math.PI*2);
+        ctx.fillStyle = '#ff6b6b';
+        ctx.fill();
+        // маленький листочек
+        ctx.beginPath();
+        ctx.ellipse(p.x + r*0.2, p.y - r*0.9, r*0.35, r*0.18, -0.4, 0, Math.PI*2);
+        ctx.fillStyle = '#68e37c';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+      }
+
+      // Ромашка (финиш)
+      {
+        const f = world.flower;
+        const p = worldToScreen(f);
+        const R = 0.26 * camera.scale;
+        for (let i=0;i<8;i++){
+          const ang = i * (Math.PI*2/8);
+          const px = p.x + Math.cos(ang)*R*1.2;
+          const py = p.y + Math.sin(ang)*R*1.2;
+          ctx.beginPath();
+          ctx.ellipse(px, py, R*0.55, R*0.22, ang, 0, Math.PI*2);
+          ctx.fillStyle = '#fff7aa'; ctx.fill();
+          ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, R*0.5, 0, Math.PI*2);
+        ctx.fillStyle = '#ffd54f'; ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.stroke();
+      }
+
+      // Байк: колёса, рама
+      // Байк: колёса, балка и шлем
+drawWheel(world.rear, '#a6e3ff');
+drawWheel(world.front,'#a6e3ff');
+
+// Балка между колёсами (визуальная рама)
+drawBeam(world.rear.p, world.front.p);
+
+// Шлем райдера
+drawCircle(world.headP.x, world.headP.y, HEAD_R, '#ffdada', '#000', 1.5);
+
+      // Рама (стойки)
+      drawStrut(world.frame.p, world.rear.p);
+      drawStrut(world.frame.p, world.front.p);
+      // Линия между колёсами
+      drawBeam(world.rear.p, world.front.p);
+
+      // Голова/рама
+      drawCircle(world.frame.p.x, world.frame.p.y, FRAME_R, '#ffdada', '#000', 1.5);
+    }
+
+    function drawWheel(w, color){
+      const p = worldToScreen(w.p);
+      const R = w.r * camera.scale;
+      // Шина
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, R, 0, Math.PI*2);
+      ctx.fillStyle = '#1e263d';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#0a0e18';
+      ctx.stroke();
+      // Протектор
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(w.ang);
+      for (let i=0;i<12;i++){
+        ctx.beginPath();
+        const a = i * (Math.PI*2/12);
+        const x = Math.cos(a) * (R*0.85);
+        const y = Math.sin(a) * (R*0.85);
+        ctx.moveTo(x*0.7, y*0.7);
+        ctx.lineTo(x, y);
+        ctx.strokeStyle = '#7fb2ff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      // Спицы
+      ctx.beginPath();
+      ctx.moveTo(-R*0.6,0); ctx.lineTo(R*0.6,0);
+      ctx.moveTo(0,-R*0.6); ctx.lineTo(0,R*0.6);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawStrut(a, b){
+      const A = worldToScreen(a), B = worldToScreen(b);
+      ctx.beginPath();
+      ctx.moveTo(A.x, A.y);
+      ctx.lineTo(B.x, B.y);
+      ctx.strokeStyle = '#7dd3a7';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    function drawBeam(a, b){
+      const A = worldToScreen(a), B = worldToScreen(b);
+      ctx.beginPath();
+      ctx.moveTo(A.x, A.y);
+      ctx.lineTo(B.x, B.y);
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // ---------- Игровой цикл ----------
+    let rafId = null, lastTs = 0, accum = 0;
+    function loop(ts){
+      if (!State.running) return;
+      if (!lastTs) lastTs = ts;
+      let dt = (ts - lastTs) / 1000;
+      dt = Math.min(dt, 0.05);
+      lastTs = ts;
+      accum += dt;
+
+      for (let s=0; s<SUB_STEPS && accum >= FIXED_DT; s++){
+        physicsStep(world, FIXED_DT);
+        accum -= FIXED_DT;
+      }
+
+      draw();
+      // Обновление таймера
+      State.timeMs = performance.now() - State.startedAt;
+      hudTime.textContent = 'Время: ' + formatTime(State.timeMs);
+
+      rafId = requestAnimationFrame(loop);
+    }
+
+    // ---------- UI/события ----------
+    function startLevel(idx){
+      State.levelIndex = idx;
+      const lvl = levels[idx];
+      world = initWorld(lvl);
+      State.applesCollected = 0;
+      State.timeMs = 0;
+      State.startedAt = performance.now();
+      updateHUD();
+      statusEl.textContent = 'Соберите все яблоки и коснитесь ромашки.';
+      showScreen('game');
+      startGame();
+    }
+    function startGame(){
+      if (State.running) return;
+      State.running = true;
+      lastTs = 0; accum = 0;
+      rafId = requestAnimationFrame(loop);
+    }
+    function pauseGame(){
+      State.running = false;
+      if (rafId) cancelAnimationFrame(rafId);
+    }
+    function restartLevel(){
+      const idx = State.levelIndex;
+      startLevel(idx);
+    }
+    function backToLobby(){
+      pauseGame();
+      showScreen('lobby');
+    }
+    function onFinish(){
+      pauseGame();
+      // Обновим рекорд
+      const lvl = levels[State.levelIndex];
+      const best = updateBestTime(lvl.id, State.timeMs);
+      openModal('Финиш!', 'Все яблоки собраны, ромашка достигнута.',
+        `Время: ${formatTime(State.timeMs)}. Лучшее: ${formatTime(best)}.`);
+    }
+    function onCrash(){
+      pauseGame();
+      openModal('Поражение', 'Опасный удар или падение.',
+        'Попробуйте ещё раз — R для рестарта.');
+    }
+
+    function updateHUD(){
+      const lvl = levels[State.levelIndex] || {name:'—'};
+      hudLevel.textContent  = 'Уровень: ' + lvl.name;
+      const total = world ? world.apples.length : 0;
+      hudApples.textContent = 'Яблоки: ' + State.applesCollected + '/' + total;
+    }
+
+    // Модалка
+    function openModal(title, text, extra=''){
+      modalTitle.textContent = title||'Сообщение';
+      modalText.textContent = text||'';
+      modalExtra.textContent = extra||'';
+      modal.classList.add('open');
+    }
+    function closeModal(){
+      modal.classList.remove('open');
+      // Возвращаемся в игру или оставляем как есть
+      if (screenGame.style.display !== 'none') {
+        // После финиша/смерти не запускаем сразу — ждём действий пользователя
+      }
+    }
+    modalOk.onclick = closeModal;
+    document.getElementById('btnShowHelp').onclick = ()=>{
+      openModal('Управление',
+        'Стрелки: ↑ газ, ↓ тормоз/реверс, ←/→ наклон. R — рестарт, Esc — лобби.',
+        'Цель: собрать все яблоки, затем коснуться ромашки как можно быстрее.');
+    };
+
+    // Клавиатура
+    function onKey(e){
+      if (State.screen !== 'game') return;
+      if (e.type === 'keydown') {
+        if (e.code === 'ArrowUp') Input.throttle = true;
+        if (e.code === 'ArrowDown') Input.brake = true;
+        if (e.code === 'ArrowLeft') Input.leanLeft = true;
+        if (e.code === 'ArrowRight') Input.leanRight = true;
+        if (e.code === 'KeyR') restartLevel();
+        if (e.code === 'Escape') backToLobby();
+      } else {
+        if (e.code === 'ArrowUp') Input.throttle = false;
+        if (e.code === 'ArrowDown') Input.brake = false;
+        if (e.code === 'ArrowLeft') Input.leanLeft = false;
+        if (e.code === 'ArrowRight') Input.leanRight = false;
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('keyup', onKey);
+
+    // Сенсорные кнопки (нажатие/удержание)
+    function addHold(btn, onDown, onUp){
+      let active = false, timer = null, interval = null;
+      const start = (e)=>{
+        e.preventDefault();
+        if (!active) { active = true; onDown(); }
+        // Если надо автоповтор — можно включить, сейчас держим просто флаг
+      };
+      const end = ()=>{
+        if (!active) return;
+        active = false;
+        if (onUp) onUp();
+        if (timer) clearTimeout(timer);
+        if (interval) clearInterval(interval);
+      };
+      btn.addEventListener('touchstart', start, {passive:false});
+      btn.addEventListener('touchend', end);
+      btn.addEventListener('touchcancel', end);
+      btn.addEventListener('mousedown', start);
+      btn.addEventListener('mouseup', end);
+      btn.addEventListener('mouseleave', end);
+    }
+    addHold(btnThrottle, ()=> Input.throttle = true, ()=> Input.throttle = false);
+    addHold(btnBrake,    ()=> Input.brake = true,    ()=> Input.brake = false);
+    addHold(btnLeanLeft, ()=> Input.leanLeft = true,  ()=> Input.leanLeft = false);
+    addHold(btnLeanRight,()=> Input.leanRight = true, ()=> Input.leanRight = false);
+    btnRestart.onclick = restartLevel;
+    btnLobby.onclick = backToLobby;
+
+    // Ресайз canvas под контейнер (с сохранением соотношения)
+    function resizeCanvas(){
+      const rect = canvas.parentElement.getBoundingClientRect();
+      // Сохраняем 16:9, вписываем по ширине
+      const w = Math.floor(rect.width);
+      const h = Math.floor(w * 9 / 16);
+      canvas.width = w; canvas.height = h;
+    }
+    window.addEventListener('resize', ()=>{ resizeCanvas(); draw(); });
+    window.addEventListener('orientationchange', ()=> setTimeout(()=>{ resizeCanvas(); draw(); }, 50));
+
+    // Инициализация
+    function init(){
+      renderLobby();
+      resizeCanvas();
+      showScreen('lobby');
+    }
+    init();
+  </script>
+</body>
+</html>
