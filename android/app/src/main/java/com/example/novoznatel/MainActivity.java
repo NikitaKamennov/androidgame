@@ -1,4 +1,4 @@
-package com.example.tanki;
+package com.example.novoznatel;
 
 import com.getcapacitor.BridgeActivity;
 

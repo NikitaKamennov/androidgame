@@ -66,13 +66,20 @@ import {
  }
  
  export async function presentInstant(title: string, body: string) {
-   try {
-     await ensurePerms();
-     await LocalNotifications.schedule({
-       notifications: [{ id: Date.now(), title, body }]
-     });
-   } catch {}
- }
+  try {
+    await ensurePerms();
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: Date.now(),
+        title,
+        body,
+        channelId: ANDROID_CHANNEL_ID,   // добавили канал
+        smallIcon: 'ic_stat_icon',
+        sound: 'default',
+      }]
+    });
+  } catch {}
+}
  
  // Экспортируем в глобал, чтобы вызывать из твоего inline-скрипта
  // @ts-ignore
