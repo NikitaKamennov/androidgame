@@ -1,620 +1,220 @@
-///https://www.phind.com/search/cmht4n5gu00003o6ws8n00o9s
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <title>Знатель PRO — Публичная сводка (отладка)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#2196F3" />
+  <title>Kamnefon Wrapper</title>
+
+  <!-- PWA-манифест для иконок при добавлении на рабочий стол (внутри Capacitor не обязателен, но не мешает) -->
+  <link rel="manifest" href="/manifest.json" />
   <style>
-    :root {
-      --bg: #0f1115;
-      --card: #161a22;
-      --muted: #9aa4b2;
-      --text: #e6e8eb;
-      --accent: #4f8cff;
-      --ok: #2e7d32;
-      --warn: #ed6c02;
-      --err: #d32f2f;
-      --border: #232733;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-    .container { max-width: 980px; margin: 0 auto; padding: 16px; }
-    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-    h1 { font-size: 18px; margin: 0; }
-    .row { display: grid; grid-template-columns: 1fr; gap: 12px; }
-    @media (min-width: 720px) { .row.two { grid-template-columns: 1fr 1fr; } }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
-    .card h2 { font-size: 16px; margin: 0 0 8px; }
-    .card h3 { font-size: 14px; margin: 12px 0 8px; color: var(--muted); }
-    .muted { color: var(--muted); }
-    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; }
-    button {
-      background: #1d2433; color: var(--text); border: 1px solid var(--border); border-radius: 10px;
-      padding: 10px 12px; cursor: pointer; font-weight: 600;
-      transition: transform .04s ease, background .2s ease, border-color .2s ease; touch-action: manipulation;
-    }
-    button:hover { background: #212a3d; border-color: #2b3347; }
-    button:active { transform: scale(0.98); }
-    .btn-primary { background: #1f293b; border-color: #39507d; }
-    .stat { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .stat .item { background: #131823; border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
-    .stat .label { font-size: 12px; color: var(--muted); }
-    .stat .value { font-size: 16px; font-weight: 700; margin-top: 2px; }
-    .list { display: grid; grid-template-columns: 1fr; gap: 6px; }
-    .rowi { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #131823; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
-    .right { text-align: right; white-space: nowrap; }
-    .small { font-size: 12px; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #1b2334; border: 1px solid #29324a; font-size: 11px; color: #b7c3d6; }
-    input[type="text"] {
-      background: #0d1017; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; width: 100%;
-    }
-    .inputs { display: grid; grid-template-columns: 1fr; gap: 8px; }
-    @media (min-width: 720px) { .inputs { grid-template-columns: 1fr 1fr 1fr; } }
-    .footer { margin-top: 12px; color: var(--muted); font-size: 12px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
-    pre#debugLog { white-space: pre-wrap; background:#0b0e14; border:1px solid #232733; color:#c9d1d9; padding:10px; border-radius:10px; margin-top:12px; max-height:320px; overflow:auto; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; padding: 16px; background: #0f172a; color: #e2e8f0; }
+    .card { max-width: 720px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 20px; }
+    h1 { margin: 0 0 12px; font-size: 22px; }
+    p { margin: 6px 0 12px; color: #94a3b8; }
+    label { display: block; margin: 10px 0 6px; font-size: 14px; color: #cbd5e1; }
+    input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0b1220; color: #e2e8f0; outline: none; }
+    input::placeholder { color: #64748b; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+    .btn { cursor: pointer; border: none; border-radius: 10px; padding: 12px 16px; background: #2563eb; color: white; font-weight: 600; }
+    .btn.secondary { background: #334155; color: #e2e8f0; }
+    .btn.warn { background: #b91c1c; }
+    .hint { font-size: 13px; color: #94a3b8; }
+    .ok { color: #22c55e; }
+    .err { color: #ef4444; }
+    .sep { height: 1px; background: #1f2937; margin: 16px 0; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>Знатель PRO — Сводка</h1>
-      <div class="badge" id="lastUpdate">—</div>
-    </header>
+  <div class="card">
+    <h1>Настройка звонков</h1>
+    <p>На первом запуске выберите ссылку приглашения или хост. Разрешите уведомления и доступ к микрофону/камере. Затем откроется основное приложение kamnefon.ru. [Локальные уведомления используются через плагин Capacitor Local Notifications.]</p>
 
-    <div class="card">
-      <h2>Параметры</h2>
-      <div class="inputs">
-        <div>
-          <div class="small muted">Group ID</div>
-          <input type="text" id="groupId" />
-        </div>
-        <div>
-          <div class="small muted">API Key</div>
-          <input type="text" id="apiKey" />
-        </div>
-        <div>
-          <div class="small muted">API URL</div>
-          <input type="text" id="apiUrl" />
-        </div>
-      </div>
-      <div class="toolbar">
-        <button id="btn7d" class="btn-primary">Последние 7 дней</button>
-        <button id="btnRefresh">Обновить сейчас</button>
-        <button id="btnNotify">Проверить уведомления</button>
-        <button id="btnReset">Сбросить кэш</button>
-        <button id="btnTestGet">Тест: GET публичный API</button>
-        <button id="btnTestPost">Тест: POST публичный API</button>
-        <button id="btnTestOptions">Тест: OPTIONS нашего API</button>
-      </div>
-      <div class="small muted" id="cacheInfo" style="margin-top:6px;"></div>
+    <div id="status"></div>
+
+    <label for="remoteInput">Ссылка приглашения ИЛИ хост (по умолчанию https://kamnefon.ru):</label>
+    <input id="remoteInput" type="text" placeholder="например: https://kamnefon.ru/invite/XXXX-UUID или kamnefon.ru" />
+
+    <div class="row">
+      <button id="detectBtn" class="btn secondary">Подставить kamnefon.ru</button>
+      <button id="saveBtn" class="btn">Сохранить</button>
+      <button id="resetBtn" class="btn warn">Сбросить</button>
     </div>
 
-    <div class="row two">
-      <div class="card">
-        <h2>Текущие сутки</h2>
-        <div class="stat">
-          <div class="item">
-            <div class="label">Количество</div>
-            <div class="value" id="todayQty">—</div>
-          </div>
-          <div class="item">
-            <div class="label">Сумма</div>
-            <div class="value" id="todayAmount">—</div>
-          </div>
-        </div>
-        <h3>По проектам</h3>
-        <div class="list" id="todayProjects"></div>
-        <h3>По артикулам</h3>
-        <div class="list" id="todayArticles"></div>
-      </div>
+    <div class="sep"></div>
 
-      <div class="card">
-        <h2>Сводка за период</h2>
-        <div class="stat">
-          <div class="item">
-            <div class="label">Количество</div>
-            <div class="value" id="periodQty">—</div>
-          </div>
-          <div class="item">
-            <div class="label">Сумма</div>
-            <div class="value" id="periodAmount">—</div>
-          </div>
-        </div>
-        <h3>По проектам</h3>
-        <div class="list" id="periodProjects"></div>
-        <h3>По артикулам</h3>
-        <div class="list" id="periodArticles"></div>
-      </div>
+    <h1>Разрешения</h1>
+    <p class="hint">Сначала уведомления (Android 13+ покажет системный запрос), затем микрофон/камера. [LocalNotifications.checkPermissions/requestPermissions].</p>
+
+    <div class="row">
+      <button id="permNotifBtn" class="btn">Разрешить уведомления</button>
+      <button id="permAVBtn" class="btn">Разрешить микрофон/камеру</button>
     </div>
 
-    <div class="footer">
-      <div id="status" class="muted">Готово</div>
-      <div class="muted small">Кэш: 10 минут • Время локальное</div>
+    <p id="permNotifState" class="hint"></p>
+    <p id="permAVState" class="hint"></p>
+
+    <div class="sep"></div>
+
+    <h1>Проверка уведомлений</h1>
+    <div class="row">
+      <button id="testNotifBtn" class="btn secondary">Тест: входящий звонок</button>
     </div>
 
-    <pre id="debugLog"></pre>
+    <div class="sep"></div>
+
+    <div class="row">
+      <button id="openBtn" class="btn">Открыть приложение</button>
+    </div>
+
+    <p class="hint" style="margin-top: 8px;">
+      После сохранения пути и выдачи разрешений нажмите «Открыть приложение». В дальнейшем оболочка будет запускать адрес из памяти автоматически. Чтобы сменить адрес — нажмите «Сбросить». 
+    </p>
   </div>
 
-  <script>
-    // ===== Константы и дефолтные значения =====
-    const DEFAULTS = {
-      API_URL: 'https://bvnt.ru:4081/znatelpro-api/public/ordersgraph',
-      API_KEY: '123123',
-      GROUP_ID: 'cmeqpqjhc0058ytzfkienz3m4',
-      TTL_MS: 10 * 60 * 1000, // 10 минут
-      PUBLIC_TEST_GET: 'https://jsonplaceholder.typicode.com/todos/1',
-      PUBLIC_TEST_POST: 'https://jsonplaceholder.typicode.com/posts',
-    };
+  <script type="module">
+    // Импортируем только при наличии Capacitor окружения (в браузере возможно не быть)
+    let capReady = false;
 
-    // ===== Ссылки на элементы =====
-    const els = {
-      groupId: document.getElementById('groupId'),
-      apiKey: document.getElementById('apiKey'),
-      apiUrl: document.getElementById('apiUrl'),
-      lastUpdate: document.getElementById('lastUpdate'),
-      cacheInfo: document.getElementById('cacheInfo'),
-      status: document.getElementById('status'),
-      todayQty: document.getElementById('todayQty'),
-      todayAmount: document.getElementById('todayAmount'),
-      todayProjects: document.getElementById('todayProjects'),
-      todayArticles: document.getElementById('todayArticles'),
-      periodQty: document.getElementById('periodQty'),
-      periodAmount: document.getElementById('periodAmount'),
-      periodProjects: document.getElementById('periodProjects'),
-      periodArticles: document.getElementById('periodArticles'),
-      btn7d: document.getElementById('btn7d'),
-      btnRefresh: document.getElementById('btnRefresh'),
-      btnNotify: document.getElementById('btnNotify'),
-      btnReset: document.getElementById('btnReset'),
-      btnTestGet: document.getElementById('btnTestGet'),
-      btnTestPost: document.getElementById('btnTestPost'),
-      btnTestOptions: document.getElementById('btnTestOptions'),
-      debugLog: document.getElementById('debugLog'),
-    };
-
-    // ===== Логгер =====
-    function dbg(title, payload) {
-      try {
-        const time = new Date().toLocaleTimeString();
-        let line = `\n[${time}] ${title}`;
-        if (payload !== undefined) {
-          line += ' ' + (typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2));
-        }
-        els.debugLog.textContent += line;
-        els.debugLog.scrollTop = els.debugLog.scrollHeight;
-        // Дублируем в консоль
-        if (payload !== undefined) console.log(title, payload);
-        else console.log(title);
-      } catch (e) { console.log(title, payload, e); }
+    // Глобальный хелпер: безопасно вызвать window.capNotify.*
+    function capNotify() {
+      return (window).capNotify;
     }
 
-    // ===== Доступ к cap-notify (если подключен) =====
-    const capNotify = (window && window.capNotify) ? window.capNotify : {
-      initNotifications: async () => {},
-      presentInstant: async (title, body) => { console.log('[notify]', title, body); }
-    };
+    // Состояние UI
+    const statusEl = document.getElementById('status');
+    const notifStateEl = document.getElementById('permNotifState');
+    const avStateEl = document.getElementById('permAVState');
+    const inputEl = document.getElementById('remoteInput');
 
-    // ===== Даты =====
-    const pad2 = (n) => (n < 10 ? '0' + n : '' + n);
-    function toLocalYYYYMMDD(date) {
-      const d = new Date(date);
-      return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-    }
-    function todayLocalStr() { return toLocalYYYYMMDD(new Date()); }
-    function daysAgoLocalStr(days) { const d = new Date(); d.setDate(d.getDate() - days); return toLocalYYYYMMDD(d); }
+    const LS_KEY = 'kamnefon.remoteUrl';
 
-    // ===== Кэш =====
-    function cacheKey(groupId) { return `znatelpro_cache_${groupId}`; }
-    function loadCache(groupId) { try { const raw = localStorage.getItem(cacheKey(groupId)); return raw ? JSON.parse(raw) : null; } catch { return null; } }
-    function saveCache(groupId, dataObj) { try { localStorage.setItem(cacheKey(groupId), JSON.stringify(dataObj)); } catch {} }
-    function resetCache(groupId) { try { localStorage.removeItem(cacheKey(groupId)); } catch {} }
+    function setStatus(html) { statusEl.innerHTML = html; }
 
-    // ===== Агрегации =====
-    function parseRows(rawRows) {
-      return Array.isArray(rawRows) ? rawRows.map(r => ({
-        msOrderNumber: r.msOrderNumber,
-        article: r.article || null,
-        price: (typeof r.price === 'number' ? r.price : null),
-        quantity: (typeof r.quantity === 'number' ? r.quantity : null),
-        project: r.project || null,
-        createdAt: r.createdAt, // строка ISO
-      })) : [];
-    }
-    function sumAmount(price, qty) {
-      const p = Number(price || 0); const q = Number(qty || 0);
-      if (!Number.isFinite(p) || !Number.isFinite(q)) return 0;
-      return p * q;
-    }
-    function aggregate(rows) {
-      const todayKey = todayLocalStr();
-      const totalsByProject = new Map();
-      const totalsByArticle = new Map();
-      let totalQty = 0, totalAmount = 0;
-      const tByProject = new Map();
-      const tByArticle = new Map();
-      let tQty = 0, tAmount = 0;
-
-      for (const r of rows) {
-        const qty = Number(r.quantity || 0);
-        const amt = sumAmount(r.price, r.quantity);
-        const project = (r.project || 'Без проекта').trim() || 'Без проекта';
-        const article = (r.article || '').trim();
-        const dateKey = (r.createdAt || '').slice(0, 10);
-
-        if (qty > 0) {
-          totalsByProject.set(project, (totalsByProject.get(project) || 0) + qty);
-          if (article) totalsByArticle.set(article, (totalsByArticle.get(article) || 0) + qty);
-          totalQty += qty; totalAmount += amt;
-        }
-        if (dateKey === todayKey && qty > 0) {
-          tByProject.set(project, (tByProject.get(project) || 0) + qty);
-          if (article) tByArticle.set(article, (tByArticle.get(article) || 0) + qty);
-          tQty += qty; tAmount += amt;
+    function normalizeRemote(input) {
+      let s = (input || '').trim();
+      if (!s) return 'https://kamnefon.ru';
+      if (!/^https?:\/\//i.test(s)) {
+        // ввели только хост или путь приглашения
+        if (s.startsWith('/')) {
+          s = 'https://kamnefon.ru' + s;
+        } else if (s.startsWith('invite/')) {
+          s = 'https://kamnefon.ru/' + s;
+        } else if (s.includes('.')) {
+          s = 'https://' + s;
+        } else {
+          s = 'https://kamnefon.ru';
         }
       }
-      return {
-        period: { totalQty, totalAmount, byProject: totalsByProject, byArticle: totalsByArticle },
-        today: { totalQty: tQty, totalAmount: tAmount, byProject: tByProject, byArticle: tByArticle }
-      };
-    }
-    function mapToSortedArray(m) { return Array.from(m.entries()).sort((a,b) => b[1]-a[1]); }
-    function formatMoney(n) {
-      return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(Math.round(n || 0));
+      return s;
     }
 
-    // ===== Рендер =====
-    function renderAggregates(aggr) {
-      els.todayQty.textContent = aggr.today.totalQty;
-      els.todayAmount.textContent = formatMoney(aggr.today.totalAmount);
-      renderList(els.todayProjects, mapToSortedArray(aggr.today.byProject), 'шт');
-      renderList(els.todayArticles, mapToSortedArray(aggr.today.byArticle), 'шт');
-
-      els.periodQty.textContent = aggr.period.totalQty;
-      els.periodAmount.textContent = formatMoney(aggr.period.totalAmount);
-      renderList(els.periodProjects, mapToSortedArray(aggr.period.byProject), 'шт');
-      renderList(els.periodArticles, mapToSortedArray(aggr.period.byArticle), 'шт');
-    }
-    function renderList(container, arr, unit) {
-      container.innerHTML = '';
-      if (!arr || arr.length === 0) {
-        const d = document.createElement('div'); d.className = 'muted small'; d.textContent = 'Нет данных'; container.appendChild(d); return;
-      }
-      const maxItems = 30;
-      arr.slice(0, maxItems).forEach(([name, qty]) => {
-        const row = document.createElement('div'); row.className = 'rowi';
-        const left = document.createElement('div'); left.textContent = name;
-        const right = document.createElement('div'); right.className = 'right'; right.textContent = `${qty} ${unit}`;
-        row.appendChild(left); row.appendChild(right); container.appendChild(row);
-      });
-      if (arr.length > maxItems) {
-        const more = document.createElement('div'); more.className = 'muted small'; more.textContent = `и ещё ${arr.length - maxItems}…`; container.appendChild(more);
-      }
+    function saveRemote(url) {
+      localStorage.setItem(LS_KEY, url);
+      setStatus('<span class="ok">Сохранено:</span> ' + url);
     }
 
-    // ===== Уведомления (дифф за сегодня) =====
-    function diffCounts(mapNew, mapOld) {
-      const inc = []; const allKeys = new Set([...(mapNew?.keys?.() || []), ...(mapOld?.keys?.() || [])]);
-      for (const k of allKeys) {
-        const n = (mapNew?.get?.(k) || 0); const o = (mapOld?.get?.(k) || 0); const d = n - o;
-        if (d > 0) inc.push([k, d]);
-      }
-      inc.sort((a,b)=>b[1]-a[1]); return inc;
-    }
-    async function notifyDiff(prevAggr, nextAggr) {
-      if (!prevAggr || !nextAggr) return;
-      const incQty = nextAggr.today.totalQty - prevAggr.today.totalQty;
-      if (incQty <= 0) return;
-      const incByArt = diffCounts(nextAggr.today.byArticle, prevAggr.today.byArticle).slice(0, 5);
-      let body = `Сегодня +${incQty} шт`;
-      if (incByArt.length) body += ' • ' + incByArt.map(([art, d]) => `${art}: +${d}`).join(', ');
-      await capNotify.presentInstant('Новые продажи (сегодня)', body);
+    function loadRemote() {
+      return localStorage.getItem(LS_KEY);
     }
 
-    // ===== Сетевые вызовы с полным логом =====
-    async function fetchJsonWithLogs(url, opts) {
-      dbg('REQUEST ->', { url, ...opts, bodyObj: safeJsonParse(opts?.body) });
+    function resetRemote() {
+      localStorage.removeItem(LS_KEY);
+      setStatus('<span class="ok">Сброшено. Введите ссылку/хост и сохраните заново.</span>');
+    }
+
+    async function ensureNotifPerms() {
       try {
-        const res = await fetch(url, opts);
-        const respHeaders = {}; try { res.headers.forEach((v,k)=>{ respHeaders[k]=v; }); } catch {}
-        dbg('RESPONSE STATUS <-', { status: res.status, statusText: res.statusText });
-        dbg('RESPONSE HEADERS <-', respHeaders);
-        const text = await res.text();
-        dbg('RESPONSE TEXT <-', text);
-        return { ok: res.ok, status: res.status, statusText: res.statusText, text, headers: respHeaders };
-      } catch (err) {
-        dbg('FETCH ERROR !!', { name: err?.name, message: err?.message, stack: err?.stack });
-        throw err;
-      }
-    }
-    function safeJsonParse(s) { try { return JSON.parse(s); } catch { return s; } }
-
-
-    function sanitizeVal(s) {
-  return (s ?? '')
-    .toString()
-    .trim()
-    .replace(/^"+|"+$/g, '')   // убираем двойные кавычки по краям
-    .replace(/^'+|'+$/g, '');  // убираем одинарные кавычки по краям
-}
-
-function writeSettings() {
-  const apiUrl = sanitizeVal(els.apiUrl.value || DEFAULTS.API_URL);
-  const apiKey = sanitizeVal(els.apiKey.value || DEFAULTS.API_KEY);
-  const groupId = sanitizeVal(els.groupId.value || DEFAULTS.GROUP_ID);
-  els.apiUrl.value = apiUrl;
-  els.apiKey.value = apiKey;
-  els.groupId.value = groupId;
-  localStorage.setItem('ZN_API_URL', apiUrl);
-  localStorage.setItem('ZN_API_KEY', apiKey);
-  localStorage.setItem('ZN_GROUP_ID', groupId);
-  return { apiUrl, apiKey, groupId };
-}
-
-
-dbg('ENV', {
-  origin: window.location.origin,
-  href: window.location.href,
-  userAgent: navigator.userAgent
-});
-
-
-
-   // Минимальный "как curl" POST + нативный fallback через Capacitor HTTP (если есть)
-async function fetchOrders({ apiUrl, apiKey, groupId, from, to }) {
-
-  const payload = { groupId:`cmeqpqjhc0058ytzfkienz3m4`, from, to };
-
-  // 1) Пытаемся обычным fetch (минимальный набор, без mode/credentials/cache)
-  try {
-    const res = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': "123123",
-      },
-      body: JSON.stringify(payload),
-    });
-    const text = await res.text();
-    dbg('FETCH RESPONSE TEXT <-', text);
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} • ${text}`);
-
-    let json;
-    try { json = JSON.parse(text); } catch (e) { throw new Error('JSON parse error: ' + (e?.message || e)); }
-    if (!json || json.status !== 'success' || !Array.isArray(json.data)) {
-      throw new Error('Некорректный ответ API');
-    }
-    return parseRows(json.data);
-  } catch (e) {
-    dbg('FETCH FAILED -> fallback to native HTTP (if available)', { message: e?.message });
-  }
-
-  // 2) Fallback: Capacitor HTTP (обходит CORS). Требуется @capacitor-community/http
-  const nativeHttp = window?.CapacitorHttp || window?.Capacitor?.Plugins?.Http;
-  if (!nativeHttp) {
-    throw new Error('Failed to fetch (и нет нативного HTTP плагина для обхода CORS)');
-  }
-
-  // Универсальный вызов: у CapacitorHttp есть request, у Plugins.Http — тоже есть request
-  const req = {
-    method: 'POST',
-    url: apiUrl,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-    },
-    data: payload,
-    // на некоторых прошивках полезно
-    connectTimeout: 10000,
-    readTimeout: 20000,
-  };
-
-  const nativeRes = await (window?.CapacitorHttp
-    ? window.CapacitorHttp.request(req)
-    : window.Capacitor.Plugins.Http.request(req));
-
-  dbg('NATIVE HTTP <-', { status: nativeRes?.status, dataType: typeof nativeRes?.data });
-
-  const status = nativeRes?.status ?? 0;
-  const data = nativeRes?.data;
-  if (status < 200 || status >= 300) {
-    const raw = typeof data === 'string' ? data : JSON.stringify(data);
-    throw new Error(`Native HTTP ${status} • ${raw}`);
-  }
-
-  // data может быть объектом или строкой
-  const json = typeof data === 'string' ? JSON.parse(data) : data;
-  if (!json || json.status !== 'success' || !Array.isArray(json.data)) {
-    throw new Error('Некорректный ответ API (native)');
-  }
-  return parseRows(json.data);
-}
-
-    // Публичные тесты
-    async function testPublicGet() {
-      const { ok, status, statusText } = await fetchJsonWithLogs(DEFAULTS.PUBLIC_TEST_GET, {
-        method: 'GET', mode: 'cors', credentials: 'omit', cache: 'no-store'
-      });
-      if (!ok) throw new Error(`GET test failed: ${status} ${statusText}`);
-    }
-    async function testPublicPost() {
-      const payload = { title: 'foo', body: 'bar', userId: 1 };
-      const { ok, status, statusText } = await fetchJsonWithLogs(DEFAULTS.PUBLIC_TEST_POST, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        mode: 'cors', credentials: 'omit', cache: 'no-store'
-      });
-      if (!ok) throw new Error(`POST test failed: ${status} ${statusText}`);
-    }
-    async function testOptionsOurApi(apiUrl) {
-      // Ручной OPTIONS (не настоящий preflight, но покажет, как сервер на него реагирует)
-      await fetchJsonWithLogs(apiUrl, {
-        method: 'OPTIONS',
-        headers: {
-          'Access-Control-Request-Method': 'POST',
-          'Access-Control-Request-Headers': 'content-type,x-api-key',
-        },
-        mode: 'cors', credentials: 'omit', cache: 'no-store'
-      });
-    }
-
-    // ===== Состояние и настройки =====
-    let state = {
-      from: daysAgoLocalStr(6), // 7 дней, включая сегодня
-      to: todayLocalStr(),
-      rows: [],
-      ts: 0,
-      initial: true,
-    };
-
-    function readSettings() {
-      // Сначала заполним инпуты дефолтами, затем перезапишем сохраненными (если есть)
-      const defaults = {
-        apiUrl: DEFAULTS.API_URL,
-        apiKey: DEFAULTS.API_KEY,
-        groupId: DEFAULTS.GROUP_ID,
-      };
-      const saved = {
-        apiUrl: localStorage.getItem('ZN_API_URL') || defaults.apiUrl,
-        apiKey: localStorage.getItem('ZN_API_KEY') || defaults.apiKey,
-        groupId: localStorage.getItem('ZN_GROUP_ID') || defaults.groupId,
-      };
-      els.apiUrl.value = saved.apiUrl;
-      els.apiKey.value = saved.apiKey;
-      els.groupId.value = saved.groupId;
-      return saved;
-    }
-    function writeSettings() {
-      const apiUrl = (els.apiUrl.value || DEFAULTS.API_URL).trim();
-      const apiKey = (els.apiKey.value || DEFAULTS.API_KEY).trim();
-      const groupId = (els.groupId.value || DEFAULTS.GROUP_ID).trim();
-      els.apiUrl.value = apiUrl;
-      els.apiKey.value = apiKey;
-      els.groupId.value = groupId;
-      localStorage.setItem('ZN_API_URL', apiUrl);
-      localStorage.setItem('ZN_API_KEY', apiKey);
-      localStorage.setItem('ZN_GROUP_ID', groupId);
-      return { apiUrl, apiKey, groupId };
-    }
-
-    function setStatus(s) { els.status.textContent = s; }
-
-    // ===== Основной поток =====
-    async function loadOrFetch({ force = false } = {}) {
-      const { apiUrl, apiKey, groupId } = writeSettings();
-      const ck = loadCache(groupId);
-      const now = Date.now();
-
-      if (ck && ck.ts) els.cacheInfo.textContent = `Кэш от ${new Date(ck.ts).toLocaleString()} • from=${ck.from} to=${ck.to}`;
-      else els.cacheInfo.textContent = 'Кэша нет';
-
-      if (!force && ck && (now - ck.ts) < DEFAULTS.TTL_MS && ck.from === state.from && ck.to === state.to) {
-        state.rows = parseRows(ck.data || []);
-        state.ts = ck.ts;
-        els.lastUpdate.textContent = `Кэш • ${new Date(ck.ts).toLocaleTimeString()}`;
-        renderAggregates(aggregate(state.rows));
-        state.initial = false;
-        return { usedCache: true };
-      }
-
-      setStatus('Запрос данных…');
-      const prevAggr = state.rows && state.rows.length ? aggregate(state.rows) : null;
-
-      dbg('LOAD -> params', { url: apiUrl, groupId, from: state.from, to: state.to });
-
-      try {
-        const rows = await fetchOrders({ apiUrl, apiKey, groupId, from: state.from, to: state.to });
-        state.rows = rows;
-        state.ts = now;
-        saveCache(groupId, { ts: now, from: state.from, to: state.to, data: rows });
-        els.lastUpdate.textContent = `Свежие • ${new Date(now).toLocaleTimeString()}`;
-        els.cacheInfo.textContent = `Кэш от ${new Date(now).toLocaleString()} • from=${state.from} to=${state.to}`;
-        const nextAggr = aggregate(rows);
-        renderAggregates(nextAggr);
-        if (!state.initial) { await notifyDiff(prevAggr, nextAggr); }
-        state.initial = false;
-        setStatus('Готово');
-        return { usedCache: false };
+        if (!capReady || !capNotify()) {
+          setStatus('<span class="err">Плагин уведомлений не инициализирован.</span>');
+          return false;
+        }
+        await capNotify().initNotifications(); // создаст канал и запросит права при необходимости
+        notifStateEl.textContent = 'Уведомления: разрешены или не требуются (Android < 13).';
+        return true;
       } catch (e) {
-        dbg('LOAD ERROR', { message: e?.message, stack: e?.stack });
-        setStatus('Ошибка загрузки: ' + (e.message || e));
-        return { error: e };
+        notifStateEl.textContent = 'Уведомления: отказ или ошибка.';
+        return false;
       }
     }
 
-    // ===== Обработчики =====
-    els.btn7d.addEventListener('click', async () => {
-      state.from = daysAgoLocalStr(6);
-      state.to = todayLocalStr();
-      await loadOrFetch({ force: true });
-    });
-    els.btnRefresh.addEventListener('click', async () => { await loadOrFetch({ force: true }); });
-    els.btnReset.addEventListener('click', async () => {
-      const { groupId } = writeSettings();
-      resetCache(groupId);
-      els.cacheInfo.textContent = 'Кэш очищен';
-    });
-    els.btnNotify.addEventListener('click', async () => {
+    async function ensureAVPerms() {
       try {
-        await capNotify.initNotifications?.();
-        const aggr = aggregate(state.rows || []);
-        const topArts = mapToSortedArray(aggr.today.byArticle).slice(0, 3).map(([a, q]) => `${a}: ${q}`).join(', ');
-        const body = `Сегодня: ${aggr.today.totalQty} шт • ${topArts || 'без артикулов'}`;
-        await capNotify.presentInstant('Проверка уведомлений', body);
-      } catch (e) { console.log('notify error', e); }
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        stream.getTracks().forEach(t => t.stop());
+        avStateEl.textContent = 'Микрофон/камера: разрешены.';
+        return true;
+      } catch (e) {
+        avStateEl.textContent = 'Микрофон/камера: отказ или ошибка.';
+        return false;
+      }
+    }
+
+    document.getElementById('detectBtn').addEventListener('click', () => {
+      inputEl.value = 'https://kamnefon.ru';
     });
-    els.btnTestGet.addEventListener('click', async () => {
-      try { setStatus('GET публичный API…'); await testPublicGet(); setStatus('GET тест: ок'); } catch (e) { setStatus('GET тест: ошибка'); }
+
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      const url = normalizeRemote(inputEl.value);
+      saveRemote(url);
     });
-    els.btnTestPost.addEventListener('click', async () => {
-      try { setStatus('POST публичный API…'); await testPublicPost(); setStatus('POST тест: ок'); } catch (e) { setStatus('POST тест: ошибка'); }
-    });
-    els.btnTestOptions.addEventListener('click', async () => {
+
+    document.getElementById('resetBtn').addEventListener('click', resetRemote);
+
+    document.getElementById('permNotifBtn').addEventListener('click', ensureNotifPerms);
+    document.getElementById('permAVBtn').addEventListener('click', ensureAVPerms);
+
+    document.getElementById('testNotifBtn').addEventListener('click', async () => {
       try {
-        const { apiUrl } = writeSettings();
-        setStatus('OPTIONS наш API…');
-        await testOptionsOurApi(apiUrl);
-        setStatus('OPTIONS: выполнен (см. логи)');
-      } catch (e) { setStatus('OPTIONS: ошибка'); }
+        await ensureNotifPerms();
+        await capNotify().presentIncomingCall('Тестовый звонок', 'Поступает вызов…');
+        setStatus('<span class="ok">Тестовое уведомление отправлено.</span>');
+      } catch {
+        setStatus('<span class="err">Не удалось отправить тестовое уведомление.</span>');
+      }
     });
 
-    // ===== Инициализация =====
-   //  (async function init() {
-   //    // Сразу заполняем дефолтами, если пусто
-   //    const cur = readSettings();
-   //    if (!cur.apiUrl || !cur.apiKey || !cur.groupId) writeSettings();
+    document.getElementById('openBtn').addEventListener('click', () => {
+      const saved = loadRemote() || normalizeRemote(inputEl.value);
+      saveRemote(saved);
+      // Разрешаем навигацию во внешний адрес (см. allowNavigation в capacitor.config.ts)
+      window.location.href = saved;
+    });
 
-   //    try { await capNotify.initNotifications?.(); } catch {}
+    // Автоинициализация
+    (async function boot() {
+      // Ждем, пока capNotify подготовится (плагин поднимет каналы и лисенеры)
+      try {
+        // capNotify прикрепляется из src/cap-notify.ts (см. файл ниже)
+        capReady = !!capNotify();
+        if (capReady) {
+          await capNotify().initNotifications();
+        }
+      } catch {}
 
-   //    // Стартовый период — 7 дней
-   //    state.from = daysAgoLocalStr(6);
-   //    state.to = todayLocalStr();
+      const saved = loadRemote();
+      if (saved) {
+        inputEl.value = saved;
+      }
 
-   //    await loadOrFetch({ force: false });
-   //  })();
+      // Слушаем сообщения от kamnefon.ru (если основной HTML будет слать postMessage)
+      window.addEventListener('message', async (ev) => {
+        try {
+          const origin = new URL(saved || 'https://kamnefon.ru').origin;
+          if (ev.origin !== origin) return;
+        } catch { /* если saved пуст*/ }
 
-    (async function init() {
-  const cur = readSettings();
-  if (!cur.apiUrl || !cur.apiKey || !cur.groupId) {
-    writeSettings(); // заполнит дефолтами и сохранит
-  }
-  dbg('ENV', { origin: location.origin, href: location.href, userAgent: navigator.userAgent });
-
-  try { await capNotify.initNotifications?.(); } catch {}
-  state.from = daysAgoLocalStr(6);
-  state.to = todayLocalStr();
-
-  await loadOrFetch({ force: false });
-})();
+        const data = ev.data || {};
+        if (data && data.type === 'incoming-call') {
+          await ensureNotifPerms();
+          const title = data.title || 'Входящий звонок';
+          const body = data.body || (data.from ? `Звонит: ${data.from}` : 'Поступает вызов…');
+          await capNotify().presentIncomingCall(title, body);
+        }
+      });
+    })();
   </script>
 </body>
 </html>

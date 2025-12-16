@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "build:android": "tsc && vite build && cap copy android && cap open android"
+    "buildd": "tsc && vite build && cap copy android && cap open android"
   },
   "devDependencies": {
     "@capacitor/cli": "^7.4.4",
