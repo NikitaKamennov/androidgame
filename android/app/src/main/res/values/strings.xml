@@ -1,7 +1,12 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Знатель PRO</string>
-    <string name="title_activity_main">Знатель PRO</string>
-    <string name="package_name">com.example.novoznatel</string>
-    <string name="custom_url_scheme">com.example.novoznatel</string>
+    <string name="app_name">Камнефон</string>
+    <string name="title_activity_main">Камнефон</string>
+    <string name="package_name">com.kamnefon.app</string>
+    <string name="custom_url_scheme">com.kamnefon.app</string>
+
+    <string name="notification_channel_id">com.kamnefon.app</string>
+    <string name="notification_channel_name">Камнефон</string>
+    <string name="notification_channel_description">Камнефон</string>
+    <string name="notification_channel_importance">default</string>
 </resources>

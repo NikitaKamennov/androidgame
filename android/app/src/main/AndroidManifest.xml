@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
   <!-- Permissions -->
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.CAMERA" />
@@ -8,12 +7,8 @@
   <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
   <uses-permission android:name="android.permission.VIBRATE" />
   <uses-permission android:name="android.permission.WAKE_LOCK" />
-  <!-- Android 13+ уведомления -->
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-  <!-- Для full-screen intent уведомлений (на будущее) -->
   <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-  <!-- Если потребуется точное планирование (Android 12+): -->
-  <!-- <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" /> -->
 
   <application
     android:allowBackup="true"
@@ -26,12 +21,12 @@
     <activity
       android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
       android:name=".MainActivity"
-      android:label="@string/title_activity_main"
       android:theme="@style/AppTheme.NoActionBarLaunch"
       android:launchMode="singleTask"
       android:exported="true"
       android:showWhenLocked="true"
-      android:turnScreenOn="true">
+      android:turnScreenOn="true"
+      android:label="@string/app_name">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
@@ -49,10 +44,6 @@
     </provider>
   </application>
 </manifest>
-
-
-
-
 
 
 

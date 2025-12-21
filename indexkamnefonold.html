@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#2196F3" />
   <title>Kamnefon Wrapper</title>
+
+  <!-- PWA-манифест для иконок при добавлении на рабочий стол (внутри Capacitor не обязателен, но не мешает) -->
   <link rel="manifest" href="/manifest.json" />
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; padding: 16px; background: #0f172a; color: #e2e8f0; }
@@ -45,10 +47,12 @@
 
     <h1>Разрешения</h1>
     <p class="hint">Сначала уведомления (Android 13+ покажет системный запрос), затем микрофон/камера. [LocalNotifications.checkPermissions/requestPermissions].</p>
+
     <div class="row">
       <button id="permNotifBtn" class="btn">Разрешить уведомления</button>
       <button id="permAVBtn" class="btn">Разрешить микрофон/камеру</button>
     </div>
+
     <p id="permNotifState" class="hint"></p>
     <p id="permAVState" class="hint"></p>
 
@@ -64,36 +68,22 @@
     <div class="row">
       <button id="openBtn" class="btn">Открыть приложение</button>
     </div>
+
     <p class="hint" style="margin-top: 8px;">
-      После сохранения пути и выдачи разрешений нажмите «Открыть приложение». Если адрес был сохранён ранее — приложение откроется автоматически.
-      Чтобы сменить адрес — нажмите «Сбросить».
+      После сохранения пути и выдачи разрешений нажмите «Открыть приложение». В дальнейшем оболочка будет запускать адрес из памяти автоматически. Чтобы сменить адрес — нажмите «Сбросить». 
     </p>
   </div>
 
-  <div id="appHost" class="hidden" style="position:fixed; inset:0; background:#000;">
-    <!-- iframe будет создан динамически -->
-  </div>
-
-  <!-- Инициализация плагинов -->
-  <script type="module" src="/src/cap-notify.ts"></script>
-  <script type="module" src="/src/cap-push.ts"></script>
-
   <script type="module">
-
-// Глобальные хендлеры ошибок — чтобы WebView не схлопывался
-window.addEventListener('error', (e) => {
-  console.error('[WRAPPER ERROR]', e.error || e.message || e);
-});
-window.addEventListener('unhandledrejection', (event) => {
-  event.preventDefault?.();
-  console.error('[WRAPPER UNHANDLED]', event.reason);
-});
+    // Импортируем только при наличии Capacitor окружения (в браузере возможно не быть)
+    let capReady = false;
 
     // Глобальный хелпер: безопасно вызвать window.capNotify.*
-    function capNotify() { return (window).capNotify; }
+    function capNotify() {
+      return (window).capNotify;
+    }
 
     // Состояние UI
-    let capReady = false;
     const statusEl = document.getElementById('status');
     const notifStateEl = document.getElementById('permNotifState');
     const avStateEl = document.getElementById('permAVState');
@@ -107,6 +97,7 @@ window.addEventListener('unhandledrejection', (event) => {
       let s = (input || '').trim();
       if (!s) return 'https://kamnefon.ru';
       if (!/^https?:\/\//i.test(s)) {
+        // ввели только хост или путь приглашения
         if (s.startsWith('/')) {
           s = 'https://kamnefon.ru' + s;
         } else if (s.startsWith('invite/')) {
@@ -140,7 +131,7 @@ window.addEventListener('unhandledrejection', (event) => {
           setStatus('<span class="err">Плагин уведомлений не инициализирован.</span>');
           return false;
         }
-        await capNotify().initNotifications(); // создаст каналы и запросит права
+        await capNotify().initNotifications(); // создаст канал и запросит права при необходимости
         notifStateEl.textContent = 'Уведомления: разрешены или не требуются (Android < 13).';
         return true;
       } catch (e) {
@@ -171,6 +162,7 @@ window.addEventListener('unhandledrejection', (event) => {
     });
 
     document.getElementById('resetBtn').addEventListener('click', resetRemote);
+
     document.getElementById('permNotifBtn').addEventListener('click', ensureNotifPerms);
     document.getElementById('permAVBtn').addEventListener('click', ensureAVPerms);
 
@@ -184,144 +176,18 @@ window.addEventListener('unhandledrejection', (event) => {
       }
     });
 
-    document.getElementById('openBtn').addEventListener('click', async () => {
+    document.getElementById('openBtn').addEventListener('click', () => {
       const saved = loadRemote() || normalizeRemote(inputEl.value);
       saveRemote(saved);
-      await openInIframe(saved);
-    });
-
-    // ----- Работа с iframe -----
-    let __iframeEl = null;
-    let __iframeOrigin = null;
-
-    // Глобальный helper, чтобы cap-push мог постить в iframe
-    // @ts-ignore
-    (window).__postToIframe = function (msg) {
-      if (__iframeEl && __iframeOrigin) {
-        try { __iframeEl.contentWindow.postMessage(msg, __iframeOrigin); } catch {}
-      }
-    };
-
-    // Дедупликатор отправки push-токена в iframe
-    let __lastPushTokenSent = null;
-    let __lastPushTokenSentAt = 0;
-    function sendPushTokenToIframe(token) {
-      if (!token || !__iframeEl || !__iframeOrigin) return;
-      const now = Date.now();
-      if (__lastPushTokenSent === token && (now - __lastPushTokenSentAt) < 15000) return;
-      __lastPushTokenSent = token;
-      __lastPushTokenSentAt = now;
-      try { __iframeEl.contentWindow.postMessage({ type: 'push-token', token }, __iframeOrigin); } catch {}
-    }
-
-    function extractInvitePath(url) {
-      try {
-        const u = new URL(url);
-        return u.pathname.startsWith('/invite/') ? u.pathname : null;
-      } catch { return null; }
-    }
-
-    async function openInIframe(url) {
-      const host = document.getElementById('appHost');
-
-      // Очищаем и показываем хост
-      host.innerHTML = '';
-      host.classList.remove('hidden');
-
-      // Определим origin, чтобы фильтровать сообщения
-      const u = new URL(url);
-      __iframeOrigin = u.origin;
-
-      // Создаём iframe
-      const ifr = document.createElement('iframe');
-      ifr.src = url;
-      ifr.style.cssText = 'width:100%;height:100%;border:0;display:block;';
-  // 1) Песочница: блокирует SW и ряд контекстов, но оставляет нужные вещи
-  ifr.setAttribute('sandbox', 'allow-scripts allow-forms allow-same-origin allow-modals allow-popups allow-popups-to-escape-sandbox');
-  // 2) Permission Policy для iframe (WebRTC/клипборд/автовоспроизведение)
-  ifr.allow = 'camera; microphone; autoplay; fullscreen; clipboard-read; clipboard-write; display-capture';
-  // 3) Чуть безопаснее рефerrer (не принципиально, но полезно)
-  ifr.referrerPolicy = 'no-referrer-when-downgrade';
-      host.appendChild(ifr);
-      __iframeEl = ifr;
-
-      // Ждём загрузку и делаем хэндшейк
-      ifr.addEventListener('load', async () => {
-        // 1) Сообщаем о возможностях (локальные уведомления/пуш)
-        (window).__postToIframe({
-  type: 'capabilities',
-  localNotifications: !!(window).capNotify,
-  push: false, // ВАЖНО: пуши временно отключены до настройки Firebase
-});
-
-        // 1.1) Отправляем «bootstrap», чтобы SPA успела применить инвайт/адрес до сетевых вызовов
-        const saved = loadRemote();
-        const invitePath = saved ? extractInvitePath(saved) : null;
-        (window).__postToIframe({
-          type: 'bootstrap',
-          savedUrl: saved || null,
-          invitePath: invitePath, // например: /invite/uuid
-        });
-
- 
-      });
-    }
-
-    // ЕДИНСТВЕННЫЙ обработчик сообщений
-    window.addEventListener('message', async (ev) => {
-      try {
-        const origin = __iframeOrigin || new URL(loadRemote() || 'https://kamnefon.ru').origin;
-        if (ev.origin !== origin) return;
-      } catch {}
-
-      const data = ev.data || {};
-
-      // Входящий звонок из kamnefon.ru
-      if (data && data.type === 'incoming-call') {
-        await ensureNotifPerms();
-        const title = data.title || 'Входящий звонок';
-        const body = data.body || (data.from ? `Звонит: ${data.from}` : 'Поступает вызов…');
-        await capNotify().presentIncomingCall(title, body);
-        return;
-      }
-
-      // Запрос на выдачу пуш-токена
-   // Запрос на выдачу пуш-токена
-// if (data && data.type === 'request-push-token') {
-//   try {
-//     const token = await (window).capPush?.initPush?.();
-//     if (token) {
-//       sendPushTokenToIframe(token);
-//     } else {
-//       const t = (window).capPush?.getPushToken?.();
-//       if (t) sendPushTokenToIframe(t);
-//     }
-//   } catch (e) {
-//     console.warn('[PUSH] initPush failed:', e);
-//   }
-//   return;
-// }
-
-if (data && data.type === 'request-push-token') {
-  // Пуши отключены — ничего не делаем, чтобы не крашить Firebase
-  try {
-    if (__iframeEl && __iframeOrigin) {
-      __iframeEl.contentWindow.postMessage({ type: 'push-not-available' }, __iframeOrigin);
-    }
-  } catch {}
-  return;
-}
-
-      // (опционально) Логи из iframe
-      if (data && data.type === 'log') {
-        console.log('[IFRAME]', data.payload);
-        return;
-      }
+      // Разрешаем навигацию во внешний адрес (см. allowNavigation в capacitor.config.ts)
+      window.location.href = saved;
     });
 
     // Автоинициализация
     (async function boot() {
+      // Ждем, пока capNotify подготовится (плагин поднимет каналы и лисенеры)
       try {
+        // capNotify прикрепляется из src/cap-notify.ts (см. файл ниже)
         capReady = !!capNotify();
         if (capReady) {
           await capNotify().initNotifications();
@@ -331,9 +197,23 @@ if (data && data.type === 'request-push-token') {
       const saved = loadRemote();
       if (saved) {
         inputEl.value = saved;
-        // Авто-открытие сохранённого адреса (без нажатия кнопки)
-        await openInIframe(saved);
       }
+
+      // Слушаем сообщения от kamnefon.ru (если основной HTML будет слать postMessage)
+      window.addEventListener('message', async (ev) => {
+        try {
+          const origin = new URL(saved || 'https://kamnefon.ru').origin;
+          if (ev.origin !== origin) return;
+        } catch { /* если saved пуст*/ }
+
+        const data = ev.data || {};
+        if (data && data.type === 'incoming-call') {
+          await ensureNotifPerms();
+          const title = data.title || 'Входящий звонок';
+          const body = data.body || (data.from ? `Звонит: ${data.from}` : 'Поступает вызов…');
+          await capNotify().presentIncomingCall(title, body);
+        }
+      });
     })();
   </script>
 </body>
